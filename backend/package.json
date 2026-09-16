@@ -15,7 +15,11 @@
     "migration:revert": "npm run typeorm migration:revert",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "typeorm:prod": "typeorm -d dist/data-source.js",
+    "migration:run:prod": "npm run typeorm:prod migration:run",
+    "migration:revert:prod": "npm run typeorm:prod migration:revert",
+    "seed:prod": "node dist/seed.js"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1133.0",
