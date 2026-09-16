@@ -1,0 +1,653 @@
+{
+  "pbtResults": {
+    "4.9 ThresholdValidator の property テストを書く": {
+      "status": "passed",
+      "lastRunTimestamp": 1789530620711
+    },
+    "4.11 AnalysisEvaluator の property テスト（警告生成）を書く": {
+      "status": "passed",
+      "lastRunTimestamp": 1789530879266
+    }
+  },
+  "executionHistory": {
+    "1. モノレポの基盤とローカル統合環境をセットアップする": [
+      {
+        "executionId": "88ab4421-aaf1-4a7e-b39b-bf6c976dfbb9",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789523771579
+      },
+      {
+        "executionId": "88ab4421-aaf1-4a7e-b39b-bf6c976dfbb9",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789523917086
+      }
+    ],
+    "2.1 NestJS プロジェクトと共通設定を作成する": [
+      {
+        "executionId": "e71a79e9-7007-4e91-8666-2f9f9e46dfef",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524039882
+      },
+      {
+        "executionId": "e71a79e9-7007-4e91-8666-2f9f9e46dfef",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524300444
+      }
+    ],
+    "2.2 テスト基盤（Jest + fast-check）をセットアップする": [
+      {
+        "executionId": "e71a79e9-7007-4e91-8666-2f9f9e46dfef",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524381751
+      },
+      {
+        "executionId": "e71a79e9-7007-4e91-8666-2f9f9e46dfef",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524568828
+      }
+    ],
+    "2. Backend（NestJS）のプロジェクトスキャフォールディングを作成する": [
+      {
+        "executionId": "e71a79e9-7007-4e91-8666-2f9f9e46dfef",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524568985
+      }
+    ],
+    "3.1 TypeORM エンティティを定義する": [
+      {
+        "executionId": "6a2fc801-2892-4a97-90ae-7f0dee0300f8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524673654
+      },
+      {
+        "executionId": "6a2fc801-2892-4a97-90ae-7f0dee0300f8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524783582
+      }
+    ],
+    "3.2 マイグレーションと一意制約・インデックスを実装する": [
+      {
+        "executionId": "4b3ed4ed-2c92-4a48-b2fd-dbe2d47b4544",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789524912336
+      },
+      {
+        "executionId": "4b3ed4ed-2c92-4a48-b2fd-dbe2d47b4544",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789525039061
+      }
+    ],
+    "3. DB エンティティとマイグレーションを実装する": [
+      {
+        "executionId": "4b3ed4ed-2c92-4a48-b2fd-dbe2d47b4544",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789525039196
+      }
+    ],
+    "4.1 TargetWeekResolver を実装する": [
+      {
+        "executionId": "3b1f9770-1ab3-4d49-8afe-f3449927a52e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789525123722
+      },
+      {
+        "executionId": "3b1f9770-1ab3-4d49-8afe-f3449927a52e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789525242854
+      }
+    ],
+    "4.2 TargetWeekResolver の property テストを書く": [
+      {
+        "executionId": "7f44631f-67d5-4b7f-b2c3-9490e3972ac4",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789525295006
+      },
+      {
+        "executionId": "7f44631f-67d5-4b7f-b2c3-9490e3972ac4",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789525402806
+      },
+      {
+        "executionId": "19c64fc7-afbc-42a0-88ac-336e016710f7",
+        "chatSessionId": "sess_0543d8c4-9f66-43af-990d-fc1a5566b2c1",
+        "timestamp": 1789529594599
+      },
+      {
+        "executionId": "19c64fc7-afbc-42a0-88ac-336e016710f7",
+        "chatSessionId": "sess_0543d8c4-9f66-43af-990d-fc1a5566b2c1",
+        "timestamp": 1789529656850
+      }
+    ],
+    "3.3 エンティティ／マイグレーションのスモークテストを書く": [
+      {
+        "executionId": "6697967b-9b2b-4a95-9f43-5079d3317171",
+        "chatSessionId": "sess_31e45f1c-6916-4406-9afe-7c61e805cd39",
+        "timestamp": 1789525421801
+      },
+      {
+        "executionId": "6697967b-9b2b-4a95-9f43-5079d3317171",
+        "chatSessionId": "sess_31e45f1c-6916-4406-9afe-7c61e805cd39",
+        "timestamp": 1789529539090
+      }
+    ],
+    "4.3 WorkLocationValidator を実装する": [
+      {
+        "executionId": "2a3aab76-2a9f-4f2c-80c8-8831adb068b6",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789529701051
+      },
+      {
+        "executionId": "2a3aab76-2a9f-4f2c-80c8-8831adb068b6",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789529775197
+      }
+    ],
+    "4.4 WorkLocationValidator の property テストを書く": [
+      {
+        "executionId": "f283cb1c-80ca-4392-9474-9b44b0ce561d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789529849511
+      },
+      {
+        "executionId": "f283cb1c-80ca-4392-9474-9b44b0ce561d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789529947709
+      },
+      {
+        "executionId": "2fb48b3b-0131-4602-b04b-c56f8306edb8",
+        "chatSessionId": "sess_32300bd4-bb53-44e8-bfcc-2d4a5164252f",
+        "timestamp": 1789530134078
+      },
+      {
+        "executionId": "2fb48b3b-0131-4602-b04b-c56f8306edb8",
+        "chatSessionId": "sess_32300bd4-bb53-44e8-bfcc-2d4a5164252f",
+        "timestamp": 1789530254897
+      }
+    ],
+    "4.5 OccupancyCalculator を実装する": [
+      {
+        "executionId": "ddea961e-9bb3-478a-a7a2-5a73592c5607",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530001489
+      },
+      {
+        "executionId": "ddea961e-9bb3-478a-a7a2-5a73592c5607",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530108502
+      }
+    ],
+    "4.6 OccupancyCalculator の property テスト（Occupancy_Count）を書く": [
+      {
+        "executionId": "3983595a-f19b-4276-8841-66aba33a6c02",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530315328
+      },
+      {
+        "executionId": "3983595a-f19b-4276-8841-66aba33a6c02",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530429608
+      }
+    ],
+    "4.7 OccupancyCalculator の property テスト（出社率・在宅率）を書く": [
+      {
+        "executionId": "3983595a-f19b-4276-8841-66aba33a6c02",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530315453
+      },
+      {
+        "executionId": "3983595a-f19b-4276-8841-66aba33a6c02",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530429837
+      }
+    ],
+    "4.9 ThresholdValidator の property テストを書く": [
+      {
+        "executionId": "27a2e2e0-fbde-485d-9fde-81298595654a",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530480510
+      },
+      {
+        "executionId": "27a2e2e0-fbde-485d-9fde-81298595654a",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530646076
+      }
+    ],
+    "4.8 ThresholdValidator を実装する": [
+      {
+        "executionId": "27a2e2e0-fbde-485d-9fde-81298595654a",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530480644
+      },
+      {
+        "executionId": "27a2e2e0-fbde-485d-9fde-81298595654a",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530646167
+      }
+    ],
+    "4.10 AnalysisEvaluator を実装する": [
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530698356
+      },
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530909065
+      }
+    ],
+    "4.11 AnalysisEvaluator の property テスト（警告生成）を書く": [
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530698528
+      },
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530909175
+      }
+    ],
+    "4.12 AnalysisEvaluator の property テスト（パターン要約）を書く": [
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530698729
+      },
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530909388
+      }
+    ],
+    "4. 純粋ドメインロジック（副作用なし）とその property テストを実装する": [
+      {
+        "executionId": "95b75853-6c39-4482-9186-0bfe9d218fb8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530909270
+      }
+    ],
+    "5. Checkpoint - ドメインロジックのテストがすべて通ることを確認する": [
+      {
+        "executionId": "47a0c608-42e8-4af4-898e-25bd9570f0b8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789530983137
+      },
+      {
+        "executionId": "47a0c608-42e8-4af4-898e-25bd9570f0b8",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789531024270
+      }
+    ],
+    "6.1 共通ガード・例外フィルタ・デコレータを実装する": [
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789531093802
+      },
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789531366218
+      }
+    ],
+    "6.4 UsersModule と TeamsModule を実装する": [
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789531385575
+      },
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789531677612
+      }
+    ],
+    "6.2 AuthModule を実装する": [
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789531683647
+      },
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532267024
+      }
+    ],
+    "6. 認証・共通基盤（Auth / Users / Teams）を実装する": [
+      {
+        "executionId": "bfd2da9b-3200-41d9-ab47-7707966816ba",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532267189
+      }
+    ],
+    "7.1 勤務予定の upsert・照会 API を実装する": [
+      {
+        "executionId": "04b88b58-0030-4038-bb9e-62ce2f87d480",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532334400
+      },
+      {
+        "executionId": "04b88b58-0030-4038-bb9e-62ce2f87d480",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532570046
+      }
+    ],
+    "7. ScheduleModule（勤務予定の登録・更新・照会）を実装する": [
+      {
+        "executionId": "04b88b58-0030-4038-bb9e-62ce2f87d480",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532570195
+      }
+    ],
+    "7.2 勤務予定 upsert の統合テスト（round-trip）を書く": [
+      {
+        "executionId": "47fd3355-9669-4f0c-a1ec-3afab0cd4239",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532650231
+      },
+      {
+        "executionId": "47fd3355-9669-4f0c-a1ec-3afab0cd4239",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532825340
+      }
+    ],
+    "7.3 勤務予定 upsert の property テスト（単一性）を書く": [
+      {
+        "executionId": "04590780-f6f0-4f29-b654-24a450569dde",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532902100
+      },
+      {
+        "executionId": "04590780-f6f0-4f29-b654-24a450569dde",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789533190264
+      }
+    ],
+    "7.4 勤務予定照会の property テスト（7 日網羅・未登録区別）を書く": [
+      {
+        "executionId": "04590780-f6f0-4f29-b654-24a450569dde",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789532902271
+      },
+      {
+        "executionId": "04590780-f6f0-4f29-b654-24a450569dde",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789533190139
+      }
+    ],
+    "8.1 カレンダー集約 API を実装する": [
+      {
+        "executionId": "ca75890f-b117-4695-8b9e-4ef3fbcdb148",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789533487829
+      },
+      {
+        "executionId": "ca75890f-b117-4695-8b9e-4ef3fbcdb148",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789533853573
+      }
+    ],
+    "8. CalendarModule（チーム週次集約）を実装する": [
+      {
+        "executionId": "ca75890f-b117-4695-8b9e-4ef3fbcdb148",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789533853761
+      }
+    ],
+    "8.2 カレンダー集約の property テスト（チームフィルタ）を書く": [
+      {
+        "executionId": "48a55979-d8a4-4e3e-a2b1-5010216b3180",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789534342841
+      },
+      {
+        "executionId": "48a55979-d8a4-4e3e-a2b1-5010216b3180",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789534515732
+      }
+    ],
+    "8.3 カレンダー集約の例示・エッジケーステストを書く": [
+      {
+        "executionId": "c45d2186-6ab3-458e-93fe-3e04fce936a9",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789534593627
+      },
+      {
+        "executionId": "c45d2186-6ab3-458e-93fe-3e04fce936a9",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789534760395
+      }
+    ],
+    "9.1 ダッシュボード集計 API としきい値管理 API を実装する": [
+      {
+        "executionId": "c48b8806-3c54-4af0-9a1c-0ca72cb7488e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789534870276
+      },
+      {
+        "executionId": "c48b8806-3c54-4af0-9a1c-0ca72cb7488e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535250373
+      }
+    ],
+    "9. DashboardModule（ダッシュボード・しきい値）を実装する": [
+      {
+        "executionId": "c48b8806-3c54-4af0-9a1c-0ca72cb7488e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535250619
+      }
+    ],
+    "9.2 出社者一覧の property テストを書く": [
+      {
+        "executionId": "1e927927-d6d8-426d-9a26-e67a1b5d8900",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535463379
+      },
+      {
+        "executionId": "1e927927-d6d8-426d-9a26-e67a1b5d8900",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535805124
+      }
+    ],
+    "9.3 ダッシュボードの例示・エッジケーステストを書く": [
+      {
+        "executionId": "1e927927-d6d8-426d-9a26-e67a1b5d8900",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535463543
+      },
+      {
+        "executionId": "1e927927-d6d8-426d-9a26-e67a1b5d8900",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535805331
+      }
+    ],
+    "10.1 AI 分析実行 API を実装する": [
+      {
+        "executionId": "6d4285c6-decf-4a04-8713-d2bedab0227d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789535971826
+      },
+      {
+        "executionId": "6d4285c6-decf-4a04-8713-d2bedab0227d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789536204355
+      }
+    ],
+    "10. AnalysisModule（AI 分析）を実装する": [
+      {
+        "executionId": "6d4285c6-decf-4a04-8713-d2bedab0227d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789536204600
+      }
+    ],
+    "11. Checkpoint - バックエンドのテストがすべて通ることを確認する": [
+      {
+        "executionId": "54b0bfa5-077a-4509-869a-1c5ccc466b2c",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789536290866
+      },
+      {
+        "executionId": "54b0bfa5-077a-4509-869a-1c5ccc466b2c",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789536361354
+      }
+    ],
+    "12.1 Vite プロジェクトと共通設定を作成する": [
+      {
+        "executionId": "67fa8ad5-39f0-4c45-86e4-a120209aabde",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789536638782
+      },
+      {
+        "executionId": "67fa8ad5-39f0-4c45-86e4-a120209aabde",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537031184
+      }
+    ],
+    "12.2 API クライアントと共有型・日付ユーティリティを実装する": [
+      {
+        "executionId": "58dae718-43a5-40eb-9445-debf280f25bc",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537068751
+      },
+      {
+        "executionId": "58dae718-43a5-40eb-9445-debf280f25bc",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537373992
+      }
+    ],
+    "12. Frontend（React + Vite）のスキャフォールディングを作成する": [
+      {
+        "executionId": "58dae718-43a5-40eb-9445-debf280f25bc",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537374407
+      }
+    ],
+    "13.1 AuthProvider / ProtectedRoute / LoginPage を実装する": [
+      {
+        "executionId": "2af582c1-5f7e-4407-a949-253aa0e6678d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537445498
+      },
+      {
+        "executionId": "2af582c1-5f7e-4407-a949-253aa0e6678d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537669486
+      }
+    ],
+    "13. 認証機能（フロント）を実装する": [
+      {
+        "executionId": "2af582c1-5f7e-4407-a949-253aa0e6678d",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789537669657
+      }
+    ],
+    "14.1 ScheduleEditor を実装する": [
+      {
+        "executionId": "fde670a5-a6f4-4182-93da-0b5e57f0ce03",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789538594634
+      },
+      {
+        "executionId": "fde670a5-a6f4-4182-93da-0b5e57f0ce03",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789538738078
+      }
+    ],
+    "14.2 TeamCalendar を実装する": [
+      {
+        "executionId": "a8c73d98-f7ec-4c60-ae39-22753097802f",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789539111756
+      },
+      {
+        "executionId": "a8c73d98-f7ec-4c60-ae39-22753097802f",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789539379478
+      }
+    ],
+    "14.3 スケジュール・カレンダー画面の例示テストを書く": [
+      {
+        "executionId": "c67a6e51-57ee-4f5d-92bb-ff161a874985",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789539461764
+      },
+      {
+        "executionId": "c67a6e51-57ee-4f5d-92bb-ff161a874985",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540213487
+      }
+    ],
+    "14. 勤務予定・カレンダー画面（フロント）を実装する": [
+      {
+        "executionId": "c67a6e51-57ee-4f5d-92bb-ff161a874985",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540213620
+      }
+    ],
+    "15.1 AdminDashboard を実装する": [
+      {
+        "executionId": "07bae160-12b5-401c-8394-ab7ce9b19799",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540294447
+      },
+      {
+        "executionId": "07bae160-12b5-401c-8394-ab7ce9b19799",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540740793
+      }
+    ],
+    "15.2 AnalysisPanel を実装する": [
+      {
+        "executionId": "8af18a09-0094-4336-a365-42fc54c629d1",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540798788
+      },
+      {
+        "executionId": "8af18a09-0094-4336-a365-42fc54c629d1",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540954317
+      }
+    ],
+    "15. 管理者ダッシュボード・分析パネル（フロント）を実装する": [
+      {
+        "executionId": "8af18a09-0094-4336-a365-42fc54c629d1",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789540954499
+      }
+    ],
+    "16.1 フロントとバックエンドを結線する": [
+      {
+        "executionId": "c1631983-97f9-400a-96e1-96a9193c887c",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789541024540
+      },
+      {
+        "executionId": "c1631983-97f9-400a-96e1-96a9193c887c",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789541238375
+      }
+    ],
+    "16. 全体の結線と統合テスト": [
+      {
+        "executionId": "c1631983-97f9-400a-96e1-96a9193c887c",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789541238634
+      }
+    ],
+    "17. Final checkpoint - すべてのテストが通ることを確認する": [
+      {
+        "executionId": "b1bea623-d619-4409-aa68-48b852ab9b7e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789541287768
+      },
+      {
+        "executionId": "b1bea623-d619-4409-aa68-48b852ab9b7e",
+        "chatSessionId": "sess_186168fc-d4a0-4ee2-b9c2-826f2f913592",
+        "timestamp": 1789541451582
+      }
+    ]
+  }
+}

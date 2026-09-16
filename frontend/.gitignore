@@ -1,0 +1,18 @@
+# 依存関係
+node_modules
+
+# ビルド成果物
+dist
+dist-ssr
+dist-tsnode
+*.tsbuildinfo
+
+# ログ
+*.log
+npm-debug.log*
+
+# エディタ・OS
+.DS_Store
+*.local
+.vscode/*
+!.vscode/extensions.json

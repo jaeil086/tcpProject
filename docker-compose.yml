@@ -1,0 +1,79 @@
+# AI Team Planner ローカル統合環境
+# frontend（React + Vite）/ backend（NestJS）/ postgres（PostgreSQL）の 3 サービスを定義する。
+# frontend/ と backend/ のプロジェクトは後続タスク（2.1 / 12.1）でスキャフォールディングされる。
+# それまでは `docker compose up postgres` のように postgres 単体での起動が可能。
+
+services:
+  # フロントエンド（React + Vite + TypeScript + TailwindCSS）
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      # ホスト 5173 -> コンテナ 5173（Vite の既定ポート）
+      - "5173:5173"
+    environment:
+      # バックエンド API の接続先（ブラウザから見た URL）
+      - VITE_API_BASE_URL=http://localhost:3000
+    depends_on:
+      - backend
+    volumes:
+      # ソース変更をホットリロードするためのバインドマウント
+      - ./frontend:/app
+      # node_modules はコンテナ側を優先し、ホストで上書きしない
+      - /app/node_modules
+    restart: unless-stopped
+
+  # バックエンド（NestJS + TypeScript）
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      # ホスト 3000 -> コンテナ 3000（NestJS の既定ポート）
+      - "3000:3000"
+    environment:
+      # PostgreSQL 接続情報（postgres サービスへ接続する）
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=teamapp
+      - DATABASE_PASSWORD=teamapp_password
+      - DATABASE_NAME=teamapp
+      # AWS Cognito 設定（実際の値は .env などで上書きする）
+      - COGNITO_REGION=ap-northeast-1
+      - COGNITO_USER_POOL_ID=
+      - COGNITO_CLIENT_ID=
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # ソース変更をホットリロードするためのバインドマウント
+      - ./backend:/app
+      # node_modules はコンテナ側を優先し、ホストで上書きしない
+      - /app/node_modules
+    restart: unless-stopped
+
+  # データベース（PostgreSQL）
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      # ホスト 5432 -> コンテナ 5432（開発時の直接接続用）
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=teamapp
+      - POSTGRES_PASSWORD=teamapp_password
+      - POSTGRES_DB=teamapp
+    volumes:
+      # データを永続化するための名前付きボリューム
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # backend が起動前に DB の準備完了を待てるようにする
+      test: ["CMD-SHELL", "pg_isready -U teamapp -d teamapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  # PostgreSQL のデータ永続化用ボリューム
+  postgres_data:

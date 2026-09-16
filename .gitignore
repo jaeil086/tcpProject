@@ -1,0 +1,22 @@
+﻿# 依存関係
+node_modules/
+
+# ビルド成果物
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# 環境変数・秘密情報（コミット禁止）
+.env
+.env.*
+*.pem
+*.key
+
+# ログ・一時ファイル
+*.log
+tmp/
+
+# OS / エディタ
+.DS_Store
+Thumbs.db
