@@ -1,7 +1,5 @@
-# AI Team Planner ローカル統合環境
+﻿# AI Team Planner ローカル統合環境
 # frontend（React + Vite）/ backend（NestJS）/ postgres（PostgreSQL）の 3 サービスを定義する。
-# frontend/ と backend/ のプロジェクトは後続タスク（2.1 / 12.1）でスキャフォールディングされる。
-# それまでは `docker compose up postgres` のように postgres 単体での起動が可能。
 
 services:
   # フロントエンド（React + Vite + TypeScript + TailwindCSS）
@@ -13,18 +11,15 @@ services:
       # ホスト 5173 -> コンテナ 5173（Vite の既定ポート）
       - "5173:5173"
     environment:
-      # バックエンド API の接続先（ブラウザから見た URL）
-      - VITE_API_BASE_URL=http://localhost:3000
+      # バックエンド API の接続先（ブラウザから見た URL）。.env で上書きする。
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:3000}
     depends_on:
       - backend
-    volumes:
-      # ソース変更をホットリロードするためのバインドマウント
-      - ./frontend:/app
-      # node_modules はコンテナ側を優先し、ホストで上書きしない
-      - /app/node_modules
     restart: unless-stopped
 
   # バックエンド（NestJS + TypeScript）
+  # Dockerfile でビルドした成果物（dist）をそのまま実行する。
+  # ソースのバインドマウントは行わない（dist を上書きして起動不能になるのを防ぐ）。
   backend:
     build:
       context: ./backend
@@ -34,23 +29,27 @@ services:
       - "3000:3000"
     environment:
       # PostgreSQL 接続情報（postgres サービスへ接続する）
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_USER=teamapp
-      - DATABASE_PASSWORD=teamapp_password
-      - DATABASE_NAME=teamapp
-      # AWS Cognito 設定（実際の値は .env などで上書きする）
-      - COGNITO_REGION=ap-northeast-1
-      - COGNITO_USER_POOL_ID=
-      - COGNITO_CLIENT_ID=
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_USER=${DATABASE_USER:-teamapp}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-teamapp_password}
+      - DATABASE_NAME=${DATABASE_NAME:-teamapp}
+      # AWS Cognito 設定（.env で上書きする）
+      - COGNITO_REGION=${COGNITO_REGION:-ap-northeast-1}
+      - COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
+      - COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-}
+      # CORS 許可オリジン（フロントの URL）。.env で上書きする。
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      # シード投入用（任意。.env で設定した場合のみ有効）
+      - SEED_ADMIN_COGNITO_SUB=${SEED_ADMIN_COGNITO_SUB:-}
+      - SEED_ADMIN_EMAIL=${SEED_ADMIN_EMAIL:-}
+      - SEED_ADMIN_NAME=${SEED_ADMIN_NAME:-}
+      - SEED_EMPLOYEE_COGNITO_SUB=${SEED_EMPLOYEE_COGNITO_SUB:-}
+      - SEED_EMPLOYEE_EMAIL=${SEED_EMPLOYEE_EMAIL:-}
+      - SEED_EMPLOYEE_NAME=${SEED_EMPLOYEE_NAME:-}
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      # ソース変更をホットリロードするためのバインドマウント
-      - ./backend:/app
-      # node_modules はコンテナ側を優先し、ホストで上書きしない
-      - /app/node_modules
     restart: unless-stopped
 
   # データベース（PostgreSQL）
@@ -60,9 +59,9 @@ services:
       # ホスト 5432 -> コンテナ 5432（開発時の直接接続用）
       - "5432:5432"
     environment:
-      - POSTGRES_USER=teamapp
-      - POSTGRES_PASSWORD=teamapp_password
-      - POSTGRES_DB=teamapp
+      - POSTGRES_USER=${DATABASE_USER:-teamapp}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-teamapp_password}
+      - POSTGRES_DB=${DATABASE_NAME:-teamapp}
     volumes:
       # データを永続化するための名前付きボリューム
       - postgres_data:/var/lib/postgresql/data
