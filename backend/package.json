@@ -10,6 +10,7 @@
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
     "typeorm": "typeorm-ts-node-commonjs -d src/data-source.ts",
+    "seed": "ts-node src/seed.ts",
     "migration:run": "npm run typeorm migration:run",
     "migration:revert": "npm run typeorm migration:revert",
     "test": "jest",
