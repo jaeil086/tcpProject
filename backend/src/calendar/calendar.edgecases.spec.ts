@@ -22,7 +22,7 @@ import { CalendarService } from './calendar.service';
  *  - 実 DB を使わず、依存（UsersService / TeamsService / Schedule リポジトリ）をモック化する。
  *  - これにより環境非依存で常に実行される（スキップされない）。
  *  - 基準日はサーバー現在日から導出されるため、具体的な日付はアサートせず、
- *    「7 日分である」「null / 0 である」という不変条件のみを検証する。
+ *    「平日 5 日分である」「null / 0 である」という不変条件のみを検証する。
  */
 
 // テスト用のダミーメンバーを生成する。氏名・ID は English 識別子の値だが日本語も許容する。
@@ -100,23 +100,23 @@ describe('カレンダー集約の例示・エッジケーステスト（要件 
     // メンバーは 2 名分返る。
     expect(result.members).toHaveLength(2);
 
-    // 各メンバーは Target_Week 7 日分を持ち、すべて未登録（workLocation=null）。
+    // 各メンバーは Target_Week 平日 5 日分を持ち、すべて未登録（workLocation=null）。
     for (const member of result.members) {
-      expect(member.days).toHaveLength(7);
+      expect(member.days).toHaveLength(5);
       for (const day of member.days) {
         expect(day.workLocation).toBeNull();
       }
     }
 
-    // Occupancy_Count は 7 日分あり、すべて 0（出社登録者がいない）。
-    expect(result.occupancyByDate).toHaveLength(7);
+    // Occupancy_Count は平日 5 日分あり、すべて 0（出社登録者がいない）。
+    expect(result.occupancyByDate).toHaveLength(5);
     for (const entry of result.occupancyByDate) {
       expect(entry.officeCount).toBe(0);
     }
   });
 
   // 境界: リクエストユーザーがチーム未所属かつ teamId 未指定のとき、
-  // 対象メンバーが存在しないため members は空、Occupancy_Count は 7 日分すべて 0（要件 3.5 の空状態経路）。
+  // 対象メンバーが存在しないため members は空、Occupancy_Count は平日 5 日分すべて 0（要件 3.5 の空状態経路）。
   it('チーム未所属かつ teamId 未指定のとき、members は空で Occupancy_Count は全日 0（空状態）', async () => {
     const getMembersByTeam = jest.fn();
     const find = jest.fn();
@@ -133,8 +133,8 @@ describe('カレンダー集約の例示・エッジケーステスト（要件 
     expect(result.teamId).toBeNull();
     // メンバーは空。
     expect(result.members).toHaveLength(0);
-    // Occupancy_Count は 7 日分すべて 0。
-    expect(result.occupancyByDate).toHaveLength(7);
+    // Occupancy_Count は平日 5 日分すべて 0。
+    expect(result.occupancyByDate).toHaveLength(5);
     for (const entry of result.occupancyByDate) {
       expect(entry.officeCount).toBe(0);
     }

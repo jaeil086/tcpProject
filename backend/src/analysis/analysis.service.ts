@@ -12,7 +12,7 @@ import { AnalysisRunResponse } from './dto/analysis-response.dto';
  * AI 分析の実行を担うサービス（AnalysisModule、要件 5.1〜5.4、5.6、5.7）。
  *
  * 責務:
- * - Target_Week（翌週の月〜日 7 日分）の勤務予定を組織全体で取得する。
+ * - Target_Week（翌週の月〜金、平日 5 日分）の勤務予定を組織全体で取得する。
  * - しきい値設定は DashboardService.getThreshold() を再利用して取得し、
  *   しきい値の情報源（ThresholdSetting）を単一に保つ。
  * - 過多／過少警告と日別パターン要約の生成は純粋ドメイン関数
@@ -47,7 +47,7 @@ export class AnalysisService {
     const referenceDate = weekStartInput ?? this.getServerToday();
     const { weekStart, dates } = resolveTargetWeek(referenceDate);
 
-    // 対象 7 日分の勤務予定を全ユーザー分取得する（組織全体の分析。読み取りのみ。要件 5.7）。
+    // 対象 5 日分の勤務予定を全ユーザー分取得する（組織全体の分析。読み取りのみ。要件 5.7）。
     const schedules = await this.scheduleRepository.find({
       where: { date: In(dates as string[]) },
     });

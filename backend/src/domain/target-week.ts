@@ -1,5 +1,5 @@
 // Feature: ai-team-planner
-// TargetWeekResolver: 基準日から Target_Week（翌週の月曜〜日曜、7 日間）を導出し、
+// TargetWeekResolver: 基準日から Target_Week（翌週の月〜金、平日 5 日間）を導出し、
 // 任意の日付が Target_Week の範囲内かを判定する純粋関数モジュール（要件 2.1、2.5）。
 //
 // 設計方針:
@@ -11,18 +11,21 @@
 // - 日付計算はタイムゾーン依存の off-by-one を避けるため、UTC の 00:00:00 に固定した
 //   「日付のみ」表現（Date.UTC）で行い、決定的（deterministic）に保つ。
 
-/** Target_Week の 1 週間（7 日間）の日数。 */
+/** 1 週間の日数（翌週の月曜を求める際のオフセットに使用）。 */
 const DAYS_IN_WEEK = 7;
+
+/** Target_Week に含まれる平日（月〜金）の日数。 */
+const WEEKDAYS_IN_TARGET_WEEK = 5;
 
 /**
  * Target_Week の導出結果。
  * - weekStart: Target_Week の起点日（翌週の月曜、YYYY-MM-DD）
- * - dates: 月曜から日曜までの連続する 7 日分の日付文字列（YYYY-MM-DD）の配列
+ * - dates: 月曜から金曜までの連続する平日 5 日分の日付文字列（YYYY-MM-DD）の配列
  */
 export interface TargetWeek {
   /** 翌週の月曜日（Target_Week の起点日、YYYY-MM-DD） */
   weekStart: string;
-  /** Target_Week の 7 日分（月〜日）の日付文字列（YYYY-MM-DD） */
+  /** Target_Week の 5 日分（翌週の月〜金、平日）の日付文字列（YYYY-MM-DD） */
   dates: string[];
 }
 
@@ -111,6 +114,7 @@ function getMondayOfWeek(date: Date): Date {
  *
  * ルール: 基準日が属する「今週の月曜」の 7 日後が「翌週の月曜」となる。
  * 基準日が今週のどの曜日（月〜日）であっても、Target_Week の起点は一意に定まる。
+ * 生成される日付は月〜金の平日 5 日分だが、起点算出のオフセットは 1 週間（7 日）である。
  *
  * @param referenceDate 基準日（'YYYY-MM-DD'）
  * @returns 翌週の月曜日（'YYYY-MM-DD'）
@@ -123,17 +127,17 @@ export function getTargetWeekStart(referenceDate: string): string {
 }
 
 /**
- * 基準日から Target_Week（翌週の月〜日、7 日間）を導出する純粋関数（要件 2.1）。
+ * 基準日から Target_Week（翌週の月〜金、平日 5 日間）を導出する純粋関数（要件 2.1）。
  *
  * @param referenceDate 基準日（'YYYY-MM-DD'）
- * @returns 翌週の起点日（月曜）と、月曜から日曜までの 7 日分の日付文字列配列
+ * @returns 翌週の起点日（月曜）と、月曜から金曜までの平日 5 日分の日付文字列配列
  */
 export function resolveTargetWeek(referenceDate: string): TargetWeek {
   const weekStart = getTargetWeekStart(referenceDate);
   const weekStartDate = parseDateOnly(weekStart);
 
   const dates: string[] = [];
-  for (let offset = 0; offset < DAYS_IN_WEEK; offset++) {
+  for (let offset = 0; offset < WEEKDAYS_IN_TARGET_WEEK; offset++) {
     dates.push(formatDateOnly(addDays(weekStartDate, offset)));
   }
 
@@ -141,26 +145,24 @@ export function resolveTargetWeek(referenceDate: string): TargetWeek {
 }
 
 /**
- * 指定日が、基準日から導出される Target_Week（翌週の月〜日 7 日間）の
- * 範囲内かどうかを判定する純粋関数（要件 2.5）。
+ * 指定日が、基準日から導出される Target_Week（翌週の月〜金 平日 5 日間）の
+ * いずれかに一致するかを判定する純粋関数（要件 2.5）。
+ *
+ * Target_Week の 5 日は月〜金の平日のみで構成されるため、土曜・日曜は必ず
+ * 範囲外（false）となる。
  *
  * @param date 判定対象の日付（'YYYY-MM-DD'）
  * @param referenceDate 基準日（'YYYY-MM-DD'）
- * @returns date が Target_Week の 7 日のいずれかであれば true、それ以外は false
+ * @returns date が Target_Week の平日 5 日のいずれかであれば true、それ以外は false
  */
 export function isWithinTargetWeek(
   date: string,
   referenceDate: string,
 ): boolean {
   // 形式・暦上の妥当性を検証する。不正な日付は範囲内とはみなさない。
-  const target = parseDateOnly(date);
-  const { weekStart } = resolveTargetWeek(referenceDate);
-  const weekStartDate = parseDateOnly(weekStart);
-  const weekEndDate = addDays(weekStartDate, DAYS_IN_WEEK - 1);
+  const target = formatDateOnly(parseDateOnly(date));
+  const { dates } = resolveTargetWeek(referenceDate);
 
-  // 起点日（月曜 00:00 UTC）以上、終端日（日曜 00:00 UTC）以下であれば範囲内。
-  return (
-    target.getTime() >= weekStartDate.getTime() &&
-    target.getTime() <= weekEndDate.getTime()
-  );
+  // Target_Week の 5 日（月〜金）に一致する場合のみ true。土日は含まれない。
+  return dates.includes(target);
 }

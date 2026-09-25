@@ -3,11 +3,11 @@
 //
 // 設計方針:
 // - マウント時に GET /schedules/me（weekStart 省略）を呼び、翌週 Target_Week の
-//   7 日分（登録済み／未登録）を取得する（要件 2.6）。読込中・読込失敗の状態を表示する。
+//   平日 5 日分（登録済み／未登録）を取得する（要件 2.6）。読込中・読込失敗の状態を表示する。
 // - 各日について勤務区分（出社=office／在宅=remote）を選択できるセグメントボタンを描画する。
 //   選択肢は office/remote の 2 値のみを提示するため、不正値は UI レベルで構造的に抑止される
 //   （要件 2.2、2.3 の一次抑止）。
-// - 表示・編集対象は Target_Week の 7 日のみであるため、対象範囲外の日付は UI レベルで
+// - 表示・編集対象は Target_Week の平日 5 日のみであるため、対象範囲外の日付は UI レベルで
 //   構造的に抑止される（要件 2.5 の一次抑止）。
 // - いずれかの日の勤務区分を選択／変更すると PUT /schedules/me を呼んで保存する
 //   （要件 2.1、2.4）。成功時はローカル状態を更新し短い成功表示を出す。
@@ -67,7 +67,7 @@ function toLoadErrorMessage(error: unknown): string {
  * 勤務予定編集画面コンポーネント。
  */
 export function ScheduleEditor() {
-  // 取得した週次勤務予定（Target_Week 7 日分）。
+  // 取得した週次勤務予定（Target_Week 平日 5 日分）。
   const [schedule, setSchedule] = useState<WeekSchedule | null>(null);
   // 初回読込中フラグ。
   const [isLoading, setIsLoading] = useState(true);
@@ -171,7 +171,7 @@ export function ScheduleEditor() {
       <header className="mb-6">
         <h1 className="text-xl font-bold text-gray-800">翌週の勤務予定</h1>
         <p className="mt-1 text-sm text-gray-500">
-          翌週（月曜〜日曜）の各日について、出社／在宅を登録できます。
+          翌週（月曜〜金曜、平日）の各日について、出社／在宅を登録できます。
         </p>
       </header>
 
@@ -202,7 +202,7 @@ export function ScheduleEditor() {
         </div>
       )}
 
-      {/* 勤務予定リスト（Target_Week 7 日分。要件 2.6） */}
+      {/* 勤務予定リスト（Target_Week 平日 5 日分。要件 2.6） */}
       {!isLoading && !loadError && schedule && (
         <ul className="space-y-2">
           {schedule.days.map((day) => (

@@ -6,8 +6,8 @@
  * 目的:
  *   デプロイ後、ダッシュボード・チームカレンダー・AI 分析の各画面が
  *   実データでどう見えるかを確認できるように、DB へ大量のダミーデータを投入する。
- *   具体的には、ダミーの従業員（Employee）を複数作成し、Target_Week（翌週の月〜日）
- *   7 日分の出社／在宅予定を「曜日ごとに偏りを持たせて」投入する。
+ *   具体的には、ダミーの従業員（Employee）を複数作成し、Target_Week（翌週の月〜金、平日）
+ *   5 日分の出社／在宅予定を「曜日ごとに偏りを持たせて」投入する。
  *   さらに AI 分析の過多／過少警告が実際に出るよう、しきい値を人数に合わせて調整する。
  *
  * 重要:
@@ -83,7 +83,8 @@ function teamNameForIndex(index: number, teamNames: string[]): string {
 }
 
 /**
- * 各曜日（0=月〜6=日）の「出社率」を定義する。
+ * 各平日（0=月〜4=金）の「出社率」を定義する。
+ * Target_Week は翌週の月〜金（平日 5 日間）のため、平日 5 日分のみを持つ。
  * 曜日ごとに偏りを持たせ、ダッシュボードの出社率／在宅率が日々変わるようにする。
  * また AI 分析で過多（多い日）・過少（少ない日）の両方が出るよう、極端な日を含める。
  *   月: 0.95（ほぼ全員出社 → 過多想定）
@@ -91,10 +92,8 @@ function teamNameForIndex(index: number, teamNames: string[]): string {
  *   水: 0.60
  *   木: 0.40
  *   金: 0.80
- *   土: 0.05（休日想定・ほぼ在宅）
- *   日: 0.05
  */
-const OFFICE_RATIO_BY_WEEKDAY: number[] = [0.95, 0.1, 0.6, 0.4, 0.8, 0.05, 0.05];
+const OFFICE_RATIO_BY_WEEKDAY: number[] = [0.95, 0.1, 0.6, 0.4, 0.8];
 
 /** チームを name で find-or-create する。 */
 async function findOrCreateTeam(name: string): Promise<Team> {
@@ -210,7 +209,7 @@ async function run(): Promise<void> {
   console.log('[DB] データソースを初期化しました。');
 
   try {
-    // Target_Week（翌週の月〜日 7 日分）をサーバー現在日から導出する。
+    // Target_Week（翌週の月〜金、平日 5 日分）をサーバー現在日から導出する。
     const today = new Date().toISOString().slice(0, 10);
     const { weekStart, dates } = resolveTargetWeek(today);
     console.log(`[対象週] weekStart=${weekStart} / 日付=${dates.join(', ')}`);

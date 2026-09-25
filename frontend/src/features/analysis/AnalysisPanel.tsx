@@ -9,7 +9,7 @@
 //     種別ラベル（過多／過少）、Occupancy_Count、メッセージを含む。
 //     over_capacity（過多）と under_capacity（過少）は配色で視覚的に区別する。
 //     警告が 1 件も存在しない場合は「警告はありません」と表示する。
-//   - 日別パターン要約（summary[]、7 日分）を出社人数（出社）・在宅人数（在宅）とともに表示する。
+//   - 日別パターン要約（summary[]、平日 5 日分）を出社人数（出社）・在宅人数（在宅）とともに表示する。
 // - 成功かつ hasData=false の場合（要件 5.6）: 対象なしメッセージ（response.message、
 //   未設定時は既定の日本語メッセージ）を表示し、警告・要約セクションは描画しない。
 // - 失敗（ApiError）時: 日本語のエラーメッセージを表示する。
@@ -72,7 +72,7 @@ export function AnalysisPanel() {
       <header className="mb-6">
         <h1 className="text-xl font-bold text-gray-800">AI 分析</h1>
         <p className="mt-1 text-sm text-gray-500">
-          翌週（月曜〜日曜）の勤務予定をもとに、出社人員の過多／過少の警告と日別パターンを確認できます。
+          翌週（月曜〜金曜、平日）の勤務予定をもとに、出社人員の過多／過少の警告と日別パターンを確認できます。
         </p>
       </header>
 

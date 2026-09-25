@@ -10,8 +10,11 @@
 // - React などのフレームワーク依存を持たない純粋関数として実装し、
 //   タスク 12.3 の property テストで検証できるようにする。
 
-/** Target_Week の 1 週間（7 日間）の日数。 */
+/** 1 週間の日数（翌週の月曜を求める際のオフセットに使用）。 */
 const DAYS_IN_WEEK = 7;
+
+/** Target_Week に含まれる平日（月〜金）の日数。 */
+const WEEKDAYS_IN_TARGET_WEEK = 5;
 
 /** 'YYYY-MM-DD' 形式の妥当性を検証する正規表現（形式チェック用）。 */
 const DATE_STRING_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -22,7 +25,7 @@ const DATE_STRING_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export interface TargetWeek {
   /** 翌週の月曜日（Target_Week の起点日、YYYY-MM-DD） */
   weekStart: string;
-  /** Target_Week の 7 日分（月〜日）の日付文字列（YYYY-MM-DD） */
+  /** Target_Week の 5 日分（翌週の月〜金、平日）の日付文字列（YYYY-MM-DD） */
   dates: string[];
 }
 
@@ -116,18 +119,18 @@ export function getTargetWeekStart(referenceDate: string): string {
 }
 
 /**
- * 基準日から Target_Week（翌週の月〜日、7 日間）を導出する純粋関数（要件 2.1）。
+ * 基準日から Target_Week（翌週の月〜金、平日 5 日間）を導出する純粋関数（要件 2.1）。
  * バックエンドの resolveTargetWeek と同一の結果を返す。
  *
  * @param referenceDate 基準日（'YYYY-MM-DD'）
- * @returns 翌週の起点日（月曜）と、月曜から日曜までの 7 日分の日付文字列配列
+ * @returns 翌週の起点日（月曜）と、月曜から金曜までの平日 5 日分の日付文字列配列
  */
 export function resolveTargetWeek(referenceDate: string): TargetWeek {
   const weekStart = getTargetWeekStart(referenceDate);
   const weekStartDate = parseDateOnly(weekStart);
 
   const dates: string[] = [];
-  for (let offset = 0; offset < DAYS_IN_WEEK; offset++) {
+  for (let offset = 0; offset < WEEKDAYS_IN_TARGET_WEEK; offset++) {
     dates.push(formatDate(addDays(weekStartDate, offset)));
   }
 
@@ -135,28 +138,27 @@ export function resolveTargetWeek(referenceDate: string): TargetWeek {
 }
 
 /**
- * 指定日が、基準日から導出される Target_Week（翌週の月〜日 7 日間）の
- * 範囲内かどうかを判定する純粋関数（要件 2.5）。
+ * 指定日が、基準日から導出される Target_Week（翌週の月〜金 平日 5 日間）の
+ * いずれかに一致するかを判定する純粋関数（要件 2.5）。
  * バックエンドの isWithinTargetWeek と同一の判定を行う。
+ *
+ * Target_Week の 5 日は月〜金の平日のみで構成されるため、土曜・日曜は必ず
+ * 範囲外（false）となる。
  *
  * @param date 判定対象の日付（'YYYY-MM-DD'）
  * @param referenceDate 基準日（'YYYY-MM-DD'）
- * @returns date が Target_Week の 7 日のいずれかであれば true、それ以外は false
+ * @returns date が Target_Week の平日 5 日のいずれかであれば true、それ以外は false
  */
 export function isWithinTargetWeek(
   date: string,
   referenceDate: string,
 ): boolean {
   // 形式・暦上の妥当性を検証する。不正な日付は範囲内とはみなさない。
-  const target = parseDateOnly(date);
-  const { weekStart } = resolveTargetWeek(referenceDate);
-  const weekStartDate = parseDateOnly(weekStart);
-  const weekEndDate = addDays(weekStartDate, DAYS_IN_WEEK - 1);
+  const target = formatDate(parseDateOnly(date));
+  const { dates } = resolveTargetWeek(referenceDate);
 
-  return (
-    target.getTime() >= weekStartDate.getTime() &&
-    target.getTime() <= weekEndDate.getTime()
-  );
+  // Target_Week の 5 日（月〜金）に一致する場合のみ true。土日は含まれない。
+  return dates.includes(target);
 }
 
 /**

@@ -43,7 +43,7 @@
 //   与えられたしきい値をそのまま判定に用いる。
 //
 // パターン要約ルール（要件 5.4、設計書 Property 12 に対応）:
-// - 入力 dates（Target_Week の 7 日分など）すべてについて、当該日の
+// - 入力 dates（Target_Week の平日 5 日分など）すべてについて、当該日の
 //   officeCount（office 登録者数）と remoteCount（remote 登録者数）を持つ
 //   DailyPatternSummary を、入力 dates と同じ順序で生成する。
 // - 未登録日（当日レコードが 0 件）でも {officeCount: 0, remoteCount: 0} の
@@ -112,7 +112,7 @@ export interface AnalysisEvaluation {
  *   入力順で生成する（要件 5.4）。
  *
  * @param schedules 勤務予定レコードの集合
- * @param dates 対象日の配列（'YYYY-MM-DD' の並び。Target_Week の 7 日分など）
+ * @param dates 対象日の配列（'YYYY-MM-DD' の並び。Target_Week の平日 5 日分など）
  * @param thresholds 警告判定に用いるしきい値設定
  * @returns 生成された警告一覧と全対象日を網羅する日別パターン要約
  */

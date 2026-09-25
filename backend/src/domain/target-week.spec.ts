@@ -9,8 +9,8 @@ import {
 // 設計書の Correctness Properties のうち Property 4 を検証する。
 // タグ形式は規約に従い `// Feature: ai-team-planner, Property {番号}: {プロパティ本文}`。
 
-/** 1 週間の日数。 */
-const DAYS_IN_WEEK = 7;
+/** Target_Week に含まれる平日（月〜金）の日数。 */
+const WEEKDAYS_IN_TARGET_WEEK = 5;
 /** 1 日あたりのミリ秒。UTC 日付のみ計算に用いる。 */
 const MILLIS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -43,18 +43,18 @@ describe('TargetWeekResolver（純粋ドメインロジック）', () => {
   // Feature: ai-team-planner, Property 4: Target_Week 範囲外の登録は拒否され状態は不変
   //
   // このテストでは以下を検証する:
-  //   (1) 任意の基準日について、resolveTargetWeek は月曜起点の連続する 7 日を返し、
-  //       その 7 日はすべて isWithinTargetWeek が true となる（範囲内 7 日の網羅）。
-  //   (2) Target_Week の 7 日に含まれない任意の日付は isWithinTargetWeek が false となる
-  //       （範囲外日付は必ず拒否される）。これが Property 4 の核心である。
+  //   (1) 任意の基準日について、resolveTargetWeek は月曜起点の連続する平日 5 日（月〜金）を返し、
+  //       その 5 日はすべて isWithinTargetWeek が true となる（範囲内 5 日の網羅）。
+  //   (2) Target_Week の 5 日に含まれない任意の日付（土日を含む）は isWithinTargetWeek が
+  //       false となる（範囲外日付は必ず拒否される）。これが Property 4 の核心である。
   //   (3) weekStart は月曜であり、基準日が属する週より後（未来）に位置する。
-  it('範囲外日付は拒否され、範囲内 7 日を網羅する（Property 4）', () => {
+  it('範囲外日付は拒否され、範囲内の平日 5 日を網羅する（Property 4）', () => {
     fc.assert(
       fc.property(dateStringArbitrary, (referenceDate) => {
         const { weekStart, dates } = resolveTargetWeek(referenceDate);
 
-        // (1) 7 日ちょうどで、月曜起点の連続日であること。
-        expect(dates).toHaveLength(DAYS_IN_WEEK);
+        // (1) 平日 5 日ちょうどで、月曜起点の連続日であること。
+        expect(dates).toHaveLength(WEEKDAYS_IN_TARGET_WEEK);
         expect(dates[0]).toBe(weekStart);
 
         const weekStartMillis = Date.UTC(
@@ -66,14 +66,31 @@ describe('TargetWeekResolver（純粋ドメインロジック）', () => {
         // weekStart は月曜（getUTCDay() === 1）であること。
         expect(new Date(weekStartMillis).getUTCDay()).toBe(1);
 
-        for (let offset = 0; offset < DAYS_IN_WEEK; offset++) {
+        for (let offset = 0; offset < WEEKDAYS_IN_TARGET_WEEK; offset++) {
           const expected = toDateString(
             new Date(weekStartMillis + offset * MILLIS_PER_DAY),
           );
-          // 連続する 7 日が順に並んでいること。
+          // 連続する平日 5 日（月〜金）が順に並んでいること。
           expect(dates[offset]).toBe(expected);
-          // 範囲内 7 日はすべて Target_Week として受理されること。
+          // いずれも平日（月=1〜金=5）であり、土日を含まないこと。
+          const dayOfWeek = new Date(
+            weekStartMillis + offset * MILLIS_PER_DAY,
+          ).getUTCDay();
+          expect(dayOfWeek).toBeGreaterThanOrEqual(1);
+          expect(dayOfWeek).toBeLessThanOrEqual(5);
+          // 範囲内の平日 5 日はすべて Target_Week として受理されること。
           expect(isWithinTargetWeek(dates[offset], referenceDate)).toBe(true);
+        }
+
+        // 週末（翌週の土曜=offset 5・日曜=offset 6）は必ず範囲外であること。
+        for (const weekendOffset of [
+          WEEKDAYS_IN_TARGET_WEEK,
+          WEEKDAYS_IN_TARGET_WEEK + 1,
+        ]) {
+          const weekend = toDateString(
+            new Date(weekStartMillis + weekendOffset * MILLIS_PER_DAY),
+          );
+          expect(isWithinTargetWeek(weekend, referenceDate)).toBe(false);
         }
 
         // (3) getTargetWeekStart は resolveTargetWeek.weekStart と一致すること。
@@ -101,10 +118,10 @@ describe('TargetWeekResolver（純粋ドメインロジック）', () => {
     fc.assert(
       fc.property(
         dateStringArbitrary,
-        // -365〜-1（週より前）または 7〜371（週の終端より後）へずらすオフセット。
+        // -365〜-1（週より前）または 5〜371（平日 5 日窓の終端より後。土日を含む）へずらすオフセット。
         fc.oneof(
           fc.integer({ min: -365, max: -1 }),
-          fc.integer({ min: DAYS_IN_WEEK, max: 371 }),
+          fc.integer({ min: WEEKDAYS_IN_TARGET_WEEK, max: 371 }),
         ),
         (referenceDate, outsideOffset) => {
           const { weekStart } = resolveTargetWeek(referenceDate);
@@ -130,7 +147,7 @@ describe('TargetWeekResolver（純粋ドメインロジック）', () => {
   // 等価性による網羅検証: 任意の候補日について、
   //   isWithinTargetWeek(candidate) === (candidate が resolveTargetWeek.dates に含まれる)
   // が成り立つこと。これにより「範囲内のみ受理・範囲外は拒否」を漏れなく検証する。
-  it('受理判定は Target_Week 7 日集合への所属と等価である（Property 4）', () => {
+  it('受理判定は Target_Week 平日 5 日集合への所属と等価である（Property 4）', () => {
     fc.assert(
       fc.property(
         dateStringArbitrary,

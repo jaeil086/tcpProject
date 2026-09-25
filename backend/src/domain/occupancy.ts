@@ -143,7 +143,7 @@ export function computeDailyRates(
 }
 
 /**
- * 複数日（例: Target_Week の 7 日分）について、日別の Occupancy_Count を算出する純粋関数。
+ * 複数日（例: Target_Week の平日 5 日分）について、日別の Occupancy_Count を算出する純粋関数。
  * カレンダー／ダッシュボードでの日別表示に用いる。
  *
  * @param schedules 勤務予定レコードの集合

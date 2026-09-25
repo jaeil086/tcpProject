@@ -1,7 +1,7 @@
 /**
  * AI 分析 API のレスポンス DTO（AnalysisModule、要件 5.1〜5.4、5.6）。
  *
- * 分析は組織全体（全チーム横断）の Target_Week（翌週の月〜日 7 日分）を対象とし、
+ * 分析は組織全体（全チーム横断）の Target_Week（翌週の月〜金、平日 5 日分）を対象とし、
  * 出社人員の過多／過少警告と日別の勤務パターン要約を返す。
  * 警告・要約の型は純粋ドメイン（AnalysisEvaluator）の AnalysisWarning /
  * DailyPatternSummary を再利用し、形状の二重管理を避ける。

@@ -71,7 +71,7 @@ export class DashboardService {
     const referenceDate = weekStartInput ?? this.getServerToday();
     const { weekStart, dates } = resolveTargetWeek(referenceDate);
 
-    // 対象 7 日分の勤務予定を全ユーザー分取得する（組織全体の集計）。
+    // 対象 5 日分の勤務予定を全ユーザー分取得する（組織全体の集計）。
     const schedules = await this.scheduleRepository.find({
       where: { date: In(dates as string[]) },
     });

@@ -4,7 +4,7 @@
 // 検証観点:
 // - 未登録表示: workLocation=null の日に「未登録」インジケータが出る（要件 2.6/3.6 近傍）。
 // - フォーム一次バリデーション: 選択肢は「出社」「在宅」の 2 値のみで、対象は
-//   Target_Week の 7 日のみ（自由入力の日付欄が無い）である（要件 2.3、2.5 の一次抑止）。
+//   Target_Week の平日 5 日のみ（自由入力の日付欄が無い）である（要件 2.3、2.5 の一次抑止）。
 //   「出社」選択で upsertMySchedule が { date, workLocation: 'office' } で呼ばれる。
 // - 保存失敗時の既存表示不変: 保存が ApiError で失敗しても日本語メッセージを表示しつつ、
 //   直前まで表示していた日は消えない（既存状態を保持する）。
@@ -38,8 +38,8 @@ async function getMocks() {
   };
 }
 
-// テスト用の週次勤務予定（Target_Week 7 日分）。
-// 月曜=office、火曜=remote、それ以外は未登録（null）とする。
+// テスト用の週次勤務予定（Target_Week 平日 5 日分・月〜金）。
+// 月曜=office、火曜=remote、水〜金は未登録（null）とする。
 const WEEK_SCHEDULE: WeekSchedule = {
   weekStart: '2024-05-13',
   days: [
@@ -48,8 +48,6 @@ const WEEK_SCHEDULE: WeekSchedule = {
     { date: '2024-05-15', workLocation: null }, // 水（未登録）
     { date: '2024-05-16', workLocation: null }, // 木（未登録）
     { date: '2024-05-17', workLocation: null }, // 金（未登録）
-    { date: '2024-05-18', workLocation: null }, // 土（未登録）
-    { date: '2024-05-19', workLocation: null }, // 日（未登録）
   ],
 };
 
@@ -68,11 +66,11 @@ describe('ScheduleEditor', () => {
 
     render(<ScheduleEditor />);
 
-    // 非同期読込の完了を待つ（7 日分の行が描画される）。
+    // 非同期読込の完了を待つ（平日 5 日分の行が描画される）。
     await screen.findByRole('group', { name: '5月13日（月）の勤務区分' });
 
-    // 未登録（null）の 5 日分に「未登録」インジケータが出る。
-    expect(screen.getAllByText('未登録')).toHaveLength(5);
+    // 未登録（null）の 3 日分（水・木・金）に「未登録」インジケータが出る。
+    expect(screen.getAllByText('未登録')).toHaveLength(3);
 
     // 月曜（office）は「出社」ボタンが押下状態、「在宅」は非押下。
     const mondayGroup = screen.getByRole('group', { name: '5月13日（月）の勤務区分' });
@@ -93,7 +91,7 @@ describe('ScheduleEditor', () => {
     );
   });
 
-  it('選択肢は「出社」「在宅」の 2 値のみ・対象は 7 日のみで、「出社」選択で upsert が正しい引数で呼ばれる', async () => {
+  it('選択肢は「出社」「在宅」の 2 値のみ・対象は平日 5 日のみで、「出社」選択で upsert が正しい引数で呼ばれる', async () => {
     const mocks = await getMocks();
     mocks.getMySchedule.mockResolvedValue(WEEK_SCHEDULE);
     mocks.upsertMySchedule.mockResolvedValue({
@@ -107,15 +105,15 @@ describe('ScheduleEditor', () => {
 
     await screen.findByRole('group', { name: '5月13日（月）の勤務区分' });
 
-    // 選択肢は「出社」「在宅」の 2 値のみ（1 日 2 ボタン × 7 日）。
-    expect(screen.getAllByRole('button', { name: '出社' })).toHaveLength(7);
-    expect(screen.getAllByRole('button', { name: '在宅' })).toHaveLength(7);
+    // 選択肢は「出社」「在宅」の 2 値のみ（1 日 2 ボタン × 平日 5 日）。
+    expect(screen.getAllByRole('button', { name: '出社' })).toHaveLength(5);
+    expect(screen.getAllByRole('button', { name: '在宅' })).toHaveLength(5);
     // office/remote 以外の勤務区分の選択肢は DOM に存在しない（一次抑止）。
     expect(screen.queryByRole('button', { name: '休暇' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '出張' })).not.toBeInTheDocument();
 
-    // 対象は Target_Week の 7 日のみ（自由入力の日付欄は存在しない）。
-    expect(screen.getAllByRole('group')).toHaveLength(7);
+    // 対象は Target_Week の平日 5 日のみ（自由入力の日付欄は存在しない）。
+    expect(screen.getAllByRole('group')).toHaveLength(5);
     expect(document.querySelector('input[type="date"]')).toBeNull();
 
     // 水曜（未登録）に「出社」を選択すると upsert が { date, workLocation: 'office' } で呼ばれる。
@@ -130,7 +128,7 @@ describe('ScheduleEditor', () => {
     });
   });
 
-  it('保存失敗時は日本語エラーを表示しつつ、既存の表示（7 日分）を保持する', async () => {
+  it('保存失敗時は日本語エラーを表示しつつ、既存の表示（平日 5 日分）を保持する', async () => {
     const mocks = await getMocks();
     mocks.getMySchedule.mockResolvedValue(WEEK_SCHEDULE);
     // 400（対象範囲外・不正値相当）でサーバーの日本語メッセージを返して拒否する。
@@ -150,8 +148,8 @@ describe('ScheduleEditor', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('対象範囲外の日付です。');
 
-    // 既存の表示は消えない: 7 日分の行（group）が引き続き存在する。
-    expect(screen.getAllByRole('group')).toHaveLength(7);
+    // 既存の表示は消えない: 平日 5 日分の行（group）が引き続き存在する。
+    expect(screen.getAllByRole('group')).toHaveLength(5);
     // 元々 office だった月曜の選択状態も保持されている。
     const mondayGroup = screen.getByRole('group', { name: '5月13日（月）の勤務区分' });
     expect(within(mondayGroup).getByRole('button', { name: '出社' })).toHaveAttribute(

@@ -13,14 +13,14 @@ export interface CalendarDayEntry {
 
 /**
  * カレンダー集約における 1 メンバー分の勤務予定（要件 3.1、3.6）。
- * days は Target_Week の 7 日分を並び順どおりに網羅する。
+ * days は Target_Week の平日 5 日分を並び順どおりに網羅する。
  */
 export interface CalendarMember {
   /** メンバーのユーザー ID（User.id） */
   userId: string;
   /** メンバーの氏名 */
   name: string;
-  /** Target_Week 7 日分の勤務予定（登録済み／未登録を区別。要件 3.6） */
+  /** Target_Week 平日 5 日分の勤務予定（登録済み／未登録を区別。要件 3.6） */
   days: CalendarDayEntry[];
 }
 
@@ -29,7 +29,7 @@ export interface CalendarMember {
  *
  * - weekStart: Target_Week の起点日（翌週の月曜、YYYY-MM-DD）
  * - teamId: 集約対象として解決されたチーム ID（自チーム既定時も解決後の値を返す）
- * - members: 選択チームの所属メンバーのみ（要件 3.3）。各メンバーは 7 日分の勤務予定を持つ
+ * - members: 選択チームの所属メンバーのみ（要件 3.3）。各メンバーは平日 5 日分の勤務予定を持つ
  * - occupancyByDate: 各日の Occupancy_Count（当日 office 登録者数。要件 3.2）
  */
 export interface CalendarResponse {

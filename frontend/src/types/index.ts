@@ -180,12 +180,12 @@ export interface ScheduleDayEntry {
 
 /**
  * GET /schedules/me のレスポンス（backend WeekScheduleResponse に一致、要件 2.6）。
- * Target_Week の起点日と、月〜日の 7 日分（未登録を含む）を返す。
+ * Target_Week の起点日と、月〜金の平日 5 日分（未登録を含む）を返す。
  */
 export interface WeekSchedule {
   /** Target_Week の起点日（翌週の月曜、YYYY-MM-DD） */
   weekStart: string;
-  /** 7 日分の勤務予定（登録済み／未登録を区別。要件 2.6） */
+  /** 平日 5 日分の勤務予定（登録済み／未登録を区別。要件 2.6） */
   days: ScheduleDayEntry[];
 }
 
@@ -233,7 +233,7 @@ export interface CalendarMember {
   userId: string;
   /** メンバーの氏名 */
   name: string;
-  /** Target_Week 7 日分の勤務予定（登録済み／未登録を区別。要件 3.6） */
+  /** Target_Week 平日 5 日分の勤務予定（登録済み／未登録を区別。要件 3.6） */
   days: CalendarDayEntry[];
 }
 
@@ -299,7 +299,7 @@ export interface DashboardDailyOccupancy {
 export interface DashboardOccupancy {
   /** Target_Week の起点日（翌週の月曜、YYYY-MM-DD） */
   weekStart: string;
-  /** Target_Week 7 日分の日別集計（Occupancy_Count・出社率・在宅率） */
+  /** Target_Week 平日 5 日分の日別集計（Occupancy_Count・出社率・在宅率） */
   days: DashboardDailyOccupancy[];
 }
 

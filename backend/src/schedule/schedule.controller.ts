@@ -25,7 +25,7 @@ import {
  *
  * グローバルプレフィックス（api）により実際のパスは `/api/schedules/*` となる。
  * - PUT /schedules/me: 自身の特定日の勤務予定を upsert する（要件 2.1、2.4）。
- * - GET /schedules/me: 自身の Target_Week 7 日分を返す（要件 2.6）。
+ * - GET /schedules/me: 自身の Target_Week 平日 5 日分を返す（要件 2.6）。
  *
  * 認可（設計書 API 一覧「要認証（Employee）」）:
  * - JwtAuthGuard で認証必須とし、RolesGuard + @Roles(Employee) で Employee ロールに限定する。
@@ -61,7 +61,7 @@ export class ScheduleController {
 
   /**
    * GET /schedules/me?weekStart=YYYY-MM-DD
-   * 認証済みユーザーの Target_Week 7 日分を返す（要件 2.6）。
+   * 認証済みユーザーの Target_Week 平日 5 日分を返す（要件 2.6）。
    * weekStart 省略時はサーバー現在日から導出した翌週を対象とする。
    */
   @Get('me')

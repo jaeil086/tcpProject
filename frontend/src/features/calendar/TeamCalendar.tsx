@@ -8,7 +8,7 @@
 // - チーム選択（要件 3.3）: チーム一覧をプルダウンで提示する。選択を変更すると
 //   GET /calendar?teamId= を再取得し、当該チームのメンバーのみ表示する。既定の選択は
 //   カレンダー応答の teamId（自チーム）を反映する（要件 3.4）。
-// - カレンダーグリッド（要件 3.1、3.6）: Target_Week の 7 日を列、メンバーを行として
+// - カレンダーグリッド（要件 3.1、3.6）: Target_Week の平日 5 日を列、メンバーを行として
 //   <table> で描画する。各セルは当該日の勤務区分（出社／在宅／未登録）を表示する。
 //   未登録（workLocation=null）は視覚的に区別できる「未登録」表示にする（要件 3.6）。
 // - Occupancy_Count 行（要件 3.2）: occupancyByDate の日別 officeCount を集計行として表示する。
@@ -149,7 +149,7 @@ export function TeamCalendar() {
     [loadCalendarForTeam],
   );
 
-  // 表示対象の日付列（Target_Week 7 日分）。カレンダーが無ければ空配列。
+  // 表示対象の日付列（Target_Week 平日 5 日分）。カレンダーが無ければ空配列。
   const dates = calendar?.occupancyByDate.map((entry) => entry.date) ?? [];
   // 日付 → officeCount の対応表（Occupancy_Count 行の描画用。要件 3.2）。
   const occupancyByDate = new Map(
@@ -162,7 +162,7 @@ export function TeamCalendar() {
         <div>
           <h1 className="text-xl font-bold text-gray-800">チームカレンダー</h1>
           <p className="mt-1 text-sm text-gray-500">
-            チーム全体の翌週（月曜〜日曜）の勤務予定を確認できます。
+            チーム全体の翌週（月曜〜金曜、平日）の勤務予定を確認できます。
           </p>
         </div>
 

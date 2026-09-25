@@ -25,12 +25,12 @@ export interface DashboardDailyOccupancy {
 
 /**
  * GET /dashboard/occupancy のレスポンス（要件 4.1、4.5）。
- * Target_Week の 7 日分を並び順どおりに返す。
+ * Target_Week の平日 5 日分を並び順どおりに返す。
  */
 export interface DashboardOccupancyResponse {
   /** Target_Week の起点日（翌週の月曜、YYYY-MM-DD） */
   weekStart: string;
-  /** Target_Week 7 日分の日別集計（Occupancy_Count・出社率・在宅率） */
+  /** Target_Week 平日 5 日分の日別集計（Occupancy_Count・出社率・在宅率） */
   days: DashboardDailyOccupancy[];
 }
 

@@ -30,7 +30,7 @@ import { ScheduleService } from './schedule.service';
  *
  * 決定性の確保:
  *  - ScheduleService はサーバー現在日から Target_Week を導出して範囲検証を行うため、
- *    テスト日付は resolveTargetWeek(today) が返す 7 日のいずれかから生成し、常に範囲内にする。
+ *    テスト日付は resolveTargetWeek(today) が返す平日 5 日のいずれかから生成し、常に範囲内にする。
  *  - 各 property run の冒頭で対象 (user, date) の既存行を削除し、run 間の状態を独立させる。
  */
 
@@ -156,7 +156,7 @@ describe('勤務予定 upsert の単一性 property テスト（要件 2.4、2.7
       return; // 接続不可のためスキップ（beforeAll で案内済み）
     }
 
-    // サーバー現在日から導出される Target_Week の 7 日を対象日候補にする。
+    // サーバー現在日から導出される Target_Week の平日 5 日を対象日候補にする。
     // ScheduleService は同じ現在日を基準に範囲検証するため、常に範囲内となり決定的。
     const today = new Date().toISOString().slice(0, 10);
     const { dates } = resolveTargetWeek(today);

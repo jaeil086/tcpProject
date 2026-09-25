@@ -17,7 +17,7 @@ import { ScheduleService } from './schedule.service';
  *
  * 目的:
  *  - 任意の登録状態に対して、自身の勤務予定照会（getMyWeekSchedule）が Target_Week の
- *    7 日分すべてを返し、各日が「登録済みの勤務区分」または「未登録（null）」の
+ *    平日 5 日分すべてを返し、各日が「登録済みの勤務区分」または「未登録（null）」の
  *    いずれか一方で表現されること（登録がない日は必ず未登録印になること）を検証する。
  *  - 複合一意制約・照会ロジックを含む実コードパスを通す統合テストとして実行する
  *    （設計 Testing Strategy、要件 2.6）。
@@ -30,7 +30,7 @@ import { ScheduleService } from './schedule.service';
  *
  * 決定性の確保:
  *  - ScheduleService はサーバー現在日から Target_Week を導出するため、登録する日付は
- *    resolveTargetWeek(today) が返す 7 日の部分集合から生成し、常に範囲内にする。
+ *    resolveTargetWeek(today) が返す平日 5 日の部分集合から生成し、常に範囲内にする。
  *  - 各 property run の冒頭で対象ユーザーの全予定行を削除し、run 間の状態を独立させる。
  */
 
@@ -147,16 +147,16 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
     await dataSource.destroy();
   });
 
-  // Feature: ai-team-planner, Property 5: 照会・集約結果は Target_Week の 7 日分を網羅し未登録日を区別する
-  // 任意の登録状態について、getMyWeekSchedule は Target_Week の 7 日分すべてを返し、
+  // Feature: ai-team-planner, Property 5: 照会・集約結果は Target_Week の平日 5 日分を網羅し未登録日を区別する
+  // 任意の登録状態について、getMyWeekSchedule は Target_Week の平日 5 日分すべてを返し、
   // 各日は「登録済みの勤務区分」または「未登録（null）」のいずれか一方で表現される。
   // Validates: Requirements 2.6, 3.6
-  it('Property 5: 照会結果は 7 日分を網羅し登録済み／未登録を区別する', async () => {
+  it('Property 5: 照会結果は平日 5 日分を網羅し登録済み／未登録を区別する', async () => {
     if (skipReason) {
       return; // 接続不可のためスキップ（beforeAll で案内済み）
     }
 
-    // サーバー現在日から導出される Target_Week の 7 日を基準にする。
+    // サーバー現在日から導出される Target_Week の平日 5 日を基準にする。
     // ScheduleService は同じ現在日を基準に照会するため、常に一致し決定的。
     const today = new Date().toISOString().slice(0, 10);
     const { dates } = resolveTargetWeek(today);
@@ -164,7 +164,7 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
 
     await fc.assert(
       fc.asyncProperty(
-        // 7 日のうち登録する日付の部分集合（空集合も許容し「全日未登録」を含める）。
+        // 平日 5 日のうち登録する日付の部分集合（空集合も許容し「全日未登録」を含める）。
         fc.subarray(dates),
         // 登録する各日に割り当てる勤務区分の並び（部分集合の各要素に対応させる）。
         fc.array(fc.constantFrom(WorkLocation.Office, WorkLocation.Remote), {
@@ -195,7 +195,7 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
           // 照会結果を取得する。
           const week = await scheduleService.getMyWeekSchedule(userId);
 
-          // (a) 7 日分ちょうどを、Target_Week の日付順で網羅していること。
+          // (a) 平日 5 日分ちょうどを、Target_Week の日付順で網羅していること。
           expect(week.days).toHaveLength(dates.length);
           expect(week.days.map((day) => day.date)).toEqual(dates);
 

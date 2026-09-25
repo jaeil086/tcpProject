@@ -11,15 +11,13 @@ import { WorkLocation } from '../entities/enums';
 // Property 12（タスク 4.12）を 1 ファイルにまとめて検証する（同一モジュール対象のため）。
 // タグ形式は規約に従い `// Feature: ai-team-planner, Property {番号}: {プロパティ本文}`。
 
-/** Target_Week を模した 7 日分の対象日プール（月〜日）。 */
+/** Target_Week を模した平日 5 日分の対象日プール（月〜金、2025-06-02〜2025-06-06）。 */
 const TARGET_DATES: readonly string[] = [
-  '2025-06-02',
-  '2025-06-03',
-  '2025-06-04',
-  '2025-06-05',
-  '2025-06-06',
-  '2025-06-07',
-  '2025-06-08',
+  '2025-06-02', // 月
+  '2025-06-03', // 火
+  '2025-06-04', // 水
+  '2025-06-05', // 木
+  '2025-06-06', // 金
 ];
 
 /**
@@ -29,8 +27,8 @@ const TARGET_DATES: readonly string[] = [
  */
 const DATE_POOL: readonly string[] = [
   ...TARGET_DATES,
-  '2025-06-01', // 対象週の直前（対象外）
-  '2025-06-09', // 対象週の直後（対象外）
+  '2025-06-01', // 対象週の直前・日曜（対象外）
+  '2025-06-07', // 対象週の土曜（平日外・対象外）
 ];
 
 /** userId の小さなプール。実装は userId で重複排除しないため、あえて衝突しやすくする。 */
@@ -174,8 +172,8 @@ describe('AnalysisEvaluator（純粋ドメインロジック）', () => {
   // Feature: ai-team-planner, Property 12: パターン要約は各日の実データと整合する
   //
   // 対象タスク: 4.12（Validates: Requirements 5.4）。
-  // 任意の勤務予定集合・Target_Week（7 日）の対象日集合について:
-  //   (1) summary は対象日 7 日分すべてを含む（各日ちょうど 1 エントリ）。
+  // 任意の勤務予定集合・Target_Week（平日 5 日）の対象日集合について:
+  //   (1) summary は対象日 5 日分すべてを含む（各日ちょうど 1 エントリ）。
   //   (2) 各エントリの officeCount / remoteCount は、当該日に office / remote を
   //       登録したメンバーの実人数（独立再計算値）に一致する。
   // 実装は userId で重複排除しないため、期待値も「レコード数」で数える（実装契約と一致させる）。
@@ -190,7 +188,7 @@ describe('AnalysisEvaluator（純粋ドメインロジック）', () => {
         };
         const { summary } = evaluateAnalysis(schedules, dates, thresholds);
 
-        // (1) 7 日分すべてを網羅し、対象日と同順・同数である。
+        // (1) 平日 5 日分すべてを網羅し、対象日と同順・同数である。
         expect(summary).toHaveLength(dates.length);
         expect(summary.map((s) => s.date)).toEqual([...dates]);
 

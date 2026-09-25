@@ -5,7 +5,7 @@
 // - マウント時に組織全体の日別集計（GET /dashboard/occupancy、weekStart 省略＝翌週）と
 //   現在のしきい値設定（GET /dashboard/threshold）を並列取得する（要件 4.1、4.3、4.5）。
 //   取得中はローディング表示、取得失敗時は日本語のエラーメッセージを表示する。
-// - Occupancy_Count・出社率／在宅率（要件 4.1、4.5）: Target_Week 7 日分を表で描画する。
+// - Occupancy_Count・出社率／在宅率（要件 4.1、4.5）: Target_Week 平日 5 日分を表で描画する。
 //   officeCount（Occupancy_Count）を数値で、officeRate/remoteRate を 0〜100% の
 //   パーセント値で表示する。
 // - 日別出社者一覧（要件 4.6、4.7）: 管理者が日付を選択すると GET /dashboard/attendees を
@@ -213,7 +213,7 @@ export function AdminDashboard() {
       <header className="mb-6">
         <h1 className="text-xl font-bold text-gray-800">管理者ダッシュボード</h1>
         <p className="mt-1 text-sm text-gray-500">
-          翌週（月曜〜日曜）の全体の勤務状況を確認し、しきい値を設定できます。
+          翌週（月曜〜金曜、平日）の全体の勤務状況を確認し、しきい値を設定できます。
         </p>
       </header>
 

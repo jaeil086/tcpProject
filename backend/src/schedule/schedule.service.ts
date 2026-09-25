@@ -24,9 +24,9 @@ import {
  *
  * 責務（要件 2.1〜2.7）:
  * - Cognito のサブジェクト識別子から DB ユーザー（内部 userId）を解決する。
- * - Target_Week（翌週の月〜日）範囲外・不正な勤務区分を拒否し、既存データを変更しない。
+ * - Target_Week（翌週の月〜金、平日）範囲外・不正な勤務区分を拒否し、既存データを変更しない。
  * - 「ユーザー × 日付」で一意な upsert を行い、同一日は 1 件のみ保持する（要件 2.7）。
- * - Target_Week 7 日分を登録済み／未登録（null）を区別して返す（要件 2.6）。
+ * - Target_Week 平日 5 日分を登録済み／未登録（null）を区別して返す（要件 2.6）。
  *
  * 基準日（Target_Week 導出の起点）はサーバー現在日（UTC の YYYY-MM-DD）とする。
  * ドメイン層（target-week.ts）が UTC 固定で日付計算するため、基準日も UTC で揃える。
@@ -61,13 +61,13 @@ export class ScheduleService {
     // 勤務区分の妥当性検証（不正値は 400 で拒否。要件 2.3）
     const workLocation = this.validateWorkLocation(workLocationInput);
 
-    // Target_Week（翌週の月〜日）範囲内かを検証（範囲外は 400 で拒否。要件 2.5）
+    // Target_Week（翌週の月〜金、平日）範囲内かを検証（範囲外・土日は 400 で拒否。要件 2.5）
     const referenceDate = this.getServerToday();
     if (!isWithinTargetWeek(date, referenceDate)) {
       const { weekStart, dates } = resolveTargetWeek(referenceDate);
       const weekEnd = dates[dates.length - 1];
       throw new BadRequestException(
-        `勤務予定は対象週（翌週の月曜 ${weekStart} 〜 日曜 ${weekEnd}）の範囲内で指定してください。`,
+        `勤務予定は対象週（翌週の月曜 ${weekStart} 〜 金曜 ${weekEnd}、平日のみ）の範囲内で指定してください。`,
       );
     }
 
@@ -82,7 +82,7 @@ export class ScheduleService {
   }
 
   /**
-   * 認証済みユーザーの Target_Week 7 日分の勤務予定を返す（要件 2.6）。
+   * 認証済みユーザーの Target_Week 平日 5 日分の勤務予定を返す（要件 2.6）。
    *
    * weekStart を指定した場合はその週を、省略時はサーバー現在日から導出した
    * Target_Week を対象とする。各日について登録済みの勤務区分、または未登録（null）を返す。
@@ -96,16 +96,16 @@ export class ScheduleService {
   ): Promise<WeekScheduleResponse> {
     const userId = await this.resolveUserId(cognitoSub);
 
-    // 起点日が指定されればそれを基準に、なければサーバー現在日を基準に 7 日分を導出する。
+    // 起点日が指定されればそれを基準に、なければサーバー現在日を基準に平日 5 日分を導出する。
     const referenceDate = weekStartInput ?? this.getServerToday();
     const { weekStart, dates } = resolveTargetWeek(referenceDate);
 
-    // 対象 7 日分のうち登録済みのものだけを取得する。
+    // 対象 5 日分のうち登録済みのものだけを取得する。
     const schedules = await this.scheduleRepository.find({
       where: { userId },
     });
 
-    // 日付 -> 勤務区分のマップを作り、7 日分を「登録済み／未登録」で埋める。
+    // 日付 -> 勤務区分のマップを作り、5 日分を「登録済み／未登録」で埋める。
     const workLocationByDate = new Map<string, WorkLocation>();
     for (const schedule of schedules) {
       if (dates.includes(schedule.date)) {

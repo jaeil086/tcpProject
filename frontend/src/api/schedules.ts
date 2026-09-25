@@ -10,7 +10,7 @@ import type {
 
 /**
  * GET /schedules/me?weekStart=
- * 自身の Target_Week 7 日分（未登録を含む）を返す（要件 2.6）。
+ * 自身の Target_Week 平日 5 日分（未登録を含む）を返す（要件 2.6）。
  * weekStart 省略時はサーバー現在日から翌週を対象とする。
  */
 export function getMySchedule(weekStart?: string): Promise<WeekSchedule> {

@@ -21,7 +21,7 @@ import {
  * 責務（要件 3.1〜3.4、3.6）:
  * - 認証済みユーザーを Cognito サブジェクト識別子から解決する。
  * - 対象チームを決定する（teamId 指定時はそれを、未指定時は自チームを既定とする。要件 3.3、3.4）。
- * - 選択チームの所属メンバーのみを対象に、Target_Week 7 日分の勤務予定を組み立てる（要件 3.3、3.6）。
+ * - 選択チームの所属メンバーのみを対象に、Target_Week 平日 5 日分の勤務予定を組み立てる（要件 3.3、3.6）。
  * - 日別 Occupancy_Count を純粋ドメイン関数（OccupancyCalculator）で算出する（要件 3.2）。
  *
  * 集計そのものはドメイン層（computeOccupancyByDate）に委譲し、本サービスは
@@ -78,10 +78,10 @@ export class CalendarService {
     // 選択チームの所属メンバーのみを取得する（チームフィルタ。要件 3.3）。
     const members = await this.teamsService.getMembersByTeam(targetTeamId);
 
-    // 対象メンバーの、対象 7 日分の勤務予定を取得する。
+    // 対象メンバーの、対象 5 日分の勤務予定を取得する。
     const schedules = await this.loadSchedules(members, dates);
 
-    // メンバーごとに (date -> workLocation) の索引を作り、7 日分を網羅する days[] を構築する。
+    // メンバーごとに (date -> workLocation) の索引を作り、5 日分を網羅する days[] を構築する。
     const memberViews = this.buildMemberViews(members, schedules, dates);
 
     // Occupancy_Count は純粋ドメイン関数に委譲して算出する（要件 3.2）。
@@ -121,7 +121,7 @@ export class CalendarService {
   }
 
   /**
-   * メンバー × 日付のマトリクスを構築する。各メンバーは Target_Week 7 日分を
+   * メンバー × 日付のマトリクスを構築する。各メンバーは Target_Week 平日 5 日分を
    * 並び順どおりに持ち、登録がない日は null（未登録）とする（要件 3.6）。
    */
   private buildMemberViews(

@@ -67,7 +67,7 @@ const TEAMS: Team[] = [
   { id: 'team-2', name: 'チームB' },
 ];
 
-// office/remote/null が混在するカレンダー（Target_Week 7 日）。
+// office/remote/null が混在するカレンダー（Target_Week 平日 5 日・月〜金）。
 const CALENDAR_MIXED: CalendarResponse = {
   weekStart: '2024-05-13',
   teamId: 'team-1',
@@ -76,13 +76,11 @@ const CALENDAR_MIXED: CalendarResponse = {
       userId: 'u-1',
       name: '田中',
       days: [
-        { date: '2024-05-13', workLocation: WorkLocation.Office },
-        { date: '2024-05-14', workLocation: WorkLocation.Remote },
-        { date: '2024-05-15', workLocation: null },
-        { date: '2024-05-16', workLocation: null },
-        { date: '2024-05-17', workLocation: null },
-        { date: '2024-05-18', workLocation: null },
-        { date: '2024-05-19', workLocation: null },
+        { date: '2024-05-13', workLocation: WorkLocation.Office }, // 月
+        { date: '2024-05-14', workLocation: WorkLocation.Remote }, // 火
+        { date: '2024-05-15', workLocation: null }, // 水
+        { date: '2024-05-16', workLocation: null }, // 木
+        { date: '2024-05-17', workLocation: null }, // 金
       ],
     },
   ],
@@ -92,8 +90,6 @@ const CALENDAR_MIXED: CalendarResponse = {
     { date: '2024-05-15', officeCount: 0 },
     { date: '2024-05-16', officeCount: 0 },
     { date: '2024-05-17', officeCount: 0 },
-    { date: '2024-05-18', officeCount: 0 },
-    { date: '2024-05-19', officeCount: 0 },
   ],
 };
 
@@ -134,10 +130,10 @@ describe('TeamCalendar', () => {
     // メンバー行が描画されるのを待つ。
     await screen.findByText('田中');
 
-    // 月曜=出社、火曜=在宅、残り 5 日は未登録。
+    // 月曜=出社、火曜=在宅、残り 3 日（水・木・金）は未登録。
     expect(screen.getByText('出社')).toBeInTheDocument();
     expect(screen.getByText('在宅')).toBeInTheDocument();
-    expect(screen.getAllByText('未登録')).toHaveLength(5);
+    expect(screen.getAllByText('未登録')).toHaveLength(3);
 
     // Occupancy_Count 行（出社人数）に月曜の officeCount=1 が表示される。
     const occupancyRow = screen.getByRole('row', { name: /出社人数/ });
