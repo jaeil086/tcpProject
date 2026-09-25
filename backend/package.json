@@ -19,7 +19,9 @@
     "typeorm:prod": "typeorm -d dist/data-source.js",
     "migration:run:prod": "npm run typeorm:prod migration:run",
     "migration:revert:prod": "npm run typeorm:prod migration:revert",
-    "seed:prod": "node dist/seed.js"
+    "seed:prod": "node dist/seed.js",
+    "seed:dummy": "ts-node src/seed-dummy.ts",
+    "seed:dummy:prod": "node dist/seed-dummy.js"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1133.0",
