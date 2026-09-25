@@ -52,7 +52,7 @@ function buildService(overrides: {
   thresholdFindOne?: jest.Mock;
   thresholdCreate?: jest.Mock;
   thresholdSave?: jest.Mock;
-  findByCognitoSub?: jest.Mock;
+  findById?: jest.Mock;
 }): {
   service: DashboardService;
   thresholdSave: jest.Mock;
@@ -75,7 +75,7 @@ function buildService(overrides: {
   } as unknown as Repository<ThresholdSetting>;
 
   const usersService = {
-    findByCognitoSub: overrides.findByCognitoSub ?? jest.fn(),
+    findById: overrides.findById ?? jest.fn(),
   } as unknown as UsersService;
 
   const service = new DashboardService(
@@ -117,14 +117,14 @@ describe('ダッシュボードの例示・エッジケーステスト（要件 
   ])(
     'しきい値不正入力（$label）は 400 で拒否され既存値を変更しない（要件 4.4）',
     async ({ upper, lower }) => {
-      const findByCognitoSub = jest.fn().mockResolvedValue(makeAdmin(adminSub));
+      const findById = jest.fn().mockResolvedValue(makeAdmin(adminSub));
       const thresholdFindOne = jest
         .fn()
         .mockResolvedValue(makeExistingSetting());
       const thresholdSave = jest.fn();
 
       const { service } = buildService({
-        findByCognitoSub,
+        findById,
         thresholdFindOne,
         thresholdSave,
       });
@@ -142,7 +142,7 @@ describe('ダッシュボードの例示・エッジケーステスト（要件 
   // 対照: しきい値正常更新（要件 4.3、4.4）。
   // 妥当なペアでは save が呼ばれ、返却値が入力と一致する。
   it('妥当なしきい値では save が呼ばれ、返却値が入力と一致する（要件 4.3、4.4）', async () => {
-    const findByCognitoSub = jest.fn().mockResolvedValue(makeAdmin(adminSub));
+    const findById = jest.fn().mockResolvedValue(makeAdmin(adminSub));
     const existing = makeExistingSetting();
     const thresholdFindOne = jest.fn().mockResolvedValue(existing);
     // save は保存後のエンティティ（更新済み値）を返す。
@@ -153,7 +153,7 @@ describe('ダッシュボードの例示・エッジケーステスト（要件 
       );
 
     const { service } = buildService({
-      findByCognitoSub,
+      findById,
       thresholdFindOne,
       thresholdSave,
     });
@@ -171,11 +171,11 @@ describe('ダッシュボードの例示・エッジケーステスト（要件 
 
   // 境界: 管理者が DB 未同期（解決できない）のとき、ForbiddenException を伝播し保存しない。
   it('更新者が解決できないとき、ForbiddenException を伝播し保存しない', async () => {
-    const findByCognitoSub = jest.fn().mockResolvedValue(null);
+    const findById = jest.fn().mockResolvedValue(null);
     const thresholdSave = jest.fn();
 
     const { service } = buildService({
-      findByCognitoSub,
+      findById,
       thresholdFindOne: jest.fn().mockResolvedValue(makeExistingSetting()),
       thresholdSave,
     });

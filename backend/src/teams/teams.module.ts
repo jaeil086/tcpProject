@@ -12,7 +12,7 @@ import { TeamsService } from './teams.service';
  * チーム一覧（GET /teams）とチーム別メンバー取得を提供する。
  * - Team / User エンティティを forFeature で登録する。
  * - CommonModule を import し、TeamsController の `@UseGuards(JwtAuthGuard)` が
- *   依存する CognitoTokenVerifier / JwtAuthGuard を DI で解決できるようにする。
+ *   依存する JwtTokenService / JwtAuthGuard を DI で解決できるようにする。
  * - TeamsService はカレンダー集約（タスク 8）から利用されるためエクスポートする。
  */
 @Module({

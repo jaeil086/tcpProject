@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { AuthenticatedUser } from '../common/auth/cognito-token-verifier';
+import { AuthenticatedUser } from '../common/auth/jwt-token.service';
 import { CalendarService } from './calendar.service';
 import { CalendarResponse } from './dto/calendar-response.dto';
 

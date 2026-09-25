@@ -45,12 +45,12 @@ export class CalendarService {
    * @param weekStartInput 週の起点日（YYYY-MM-DD）。省略時はサーバー現在日から翌週を導出する。
    */
   async getTeamCalendar(
-    cognitoSub: string,
+    requesterId: string,
     teamIdInput?: string,
     weekStartInput?: string,
   ): Promise<CalendarResponse> {
-    // リクエストユーザーを解決する。DB に未同期のユーザーは操作できない（403）。
-    const requester = await this.usersService.findByCognitoSub(cognitoSub);
+    // リクエストユーザーを解決する。DB に存在しないユーザーは操作できない（403）。
+    const requester = await this.usersService.findById(requesterId);
     if (!requester) {
       throw new ForbiddenException(
         'このユーザーはシステムに登録されていないため、操作を実行できません。',

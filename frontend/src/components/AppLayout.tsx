@@ -64,6 +64,9 @@ export function AppLayout() {
                   <NavLink to="/analysis" className={navLinkClass}>
                     AI 分析
                   </NavLink>
+                  <NavLink to="/admin/users" className={navLinkClass}>
+                    ユーザー管理
+                  </NavLink>
                 </>
               )}
             </nav>

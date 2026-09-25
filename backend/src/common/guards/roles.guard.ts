@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { UserRole } from '../../entities/enums';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { AuthenticatedUser } from '../auth/cognito-token-verifier';
+import { AuthenticatedUser } from '../auth/jwt-token.service';
 
 /**
  * ロールベースのアクセス制御ガード。

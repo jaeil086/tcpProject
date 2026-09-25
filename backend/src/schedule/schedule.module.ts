@@ -12,8 +12,8 @@ import { ScheduleService } from './schedule.service';
  * 勤務予定の登録・更新（PUT /schedules/me）と照会（GET /schedules/me）を提供する。
  * - Schedule エンティティを forFeature で登録する。
  * - CommonModule を import し、`@UseGuards(JwtAuthGuard, RolesGuard)` が依存する
- *   CognitoTokenVerifier / 各ガードを DI で解決できるようにする。
- * - UsersModule を import し、Cognito サブジェクト識別子から DB ユーザー（内部 userId）を
+ *   JwtTokenService / 各ガードを DI で解決できるようにする。
+ * - UsersModule を import し、トークン由来の userId から DB ユーザー（内部 userId）を
  *   解決する UsersService を利用する。
  * - ScheduleService は後続のカレンダー集約（タスク 8）から利用されるためエクスポートする。
  */

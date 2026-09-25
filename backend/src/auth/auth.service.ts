@@ -1,183 +1,117 @@
 import {
-  HttpException,
-  Inject,
+  ConflictException,
   Injectable,
   Logger,
-  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import {
-  CognitoIdentityProviderClient,
-  GlobalSignOutCommand,
-  InitiateAuthCommand,
-} from '@aws-sdk/client-cognito-identity-provider';
-import { COGNITO_CLIENT } from './cognito.provider';
+import * as bcrypt from 'bcrypt';
+import { UsersService, UserProfile } from '../users/users.service';
+import { UserRole } from '../entities/enums';
+import { JwtTokenService } from '../common/auth/jwt-token.service';
 import { LoginResponse } from './dto/login-response.dto';
 
+/** bcrypt のソルトラウンド数。 */
+const BCRYPT_SALT_ROUNDS = 10;
+
 /**
- * 認証（Cognito 連携）を担うサービス。
+ * 認証（自前管理：bcrypt + 自己発行 JWT）を担うサービス。
  *
- * 責務（設計書 AuthModule / 要件 1.2〜1.5, 1.7）:
- * - メールアドレス／パスワードによる Cognito 認証（InitiateAuth / USER_PASSWORD_AUTH）
- * - 認証失敗・ロックアウト・認証基盤障害を適切な HTTP 例外へマッピング
- * - ログアウト時のトークン無効化（GlobalSignOut によるトークン失効）
- *
- * Cognito クライアントは COGNITO_CLIENT トークン経由で注入し、単体テスト（タスク 6.3）では
- * フェイククライアントへ差し替え可能にする（設計書 Testing Strategy）。
+ * 責務:
+ * - 新規登録: メール重複を拒否し、パスワードを bcrypt でハッシュ化してユーザーを作成する。
+ *   ロールは employee、所属チームは null で作成する。
+ * - ログイン: メールでユーザーを引き当て、bcrypt でパスワードを照合し、成功時に JWT を発行する。
+ * - ログアウト: ステートレス JWT のため、実質的な失効はクライアント側のトークン破棄で成立する。
  */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    @Inject(COGNITO_CLIENT)
-    private readonly cognitoClient: CognitoIdentityProviderClient,
-    private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly jwtTokenService: JwtTokenService,
   ) {}
 
   /**
-   * メールアドレス／パスワードで Cognito 認証を行い、成功時にトークンを返す（要件 1.2）。
+   * 新規ユーザーを登録する（誰でも登録可能）。
+   * メールアドレスが既に存在する場合は 409（ConflictException）で拒否する。
+   * 成功時はパスワードハッシュを含まないプロフィールを返す。
    *
-   * Cognito のエラーは設計書 Error Handling の分類に従いマッピングする:
-   * - 資格情報不一致・未登録（NotAuthorizedException / UserNotFoundException） -> 401（要件 1.3）
-   * - 連続失敗によるロックアウト（"Password attempts exceeded"） -> 423（要件 1.4）
-   * - Cognito 無応答・システムエラー（InternalError / ネットワーク等） -> 503（要件 1.5）
-   *
-   * @param email ログインメールアドレス
-   * @param password ログインパスワード
+   * @param email メールアドレス
+   * @param password 平文パスワード（DTO で 8 文字以上を検証済み）
+   * @param name 氏名
    */
-  async login(email: string, password: string): Promise<LoginResponse> {
-    const clientId = this.configService.get<string>('COGNITO_CLIENT_ID');
-    if (!clientId) {
-      // 設定不足は認証基盤の不備として 503 とする（要件 1.5）
-      this.logger.error('COGNITO_CLIENT_ID が未設定です。');
-      throw new ServiceUnavailableException(
-        '現在認証を行えません。時間をおいて再度お試しください。',
+  async register(
+    email: string,
+    password: string,
+    name: string,
+  ): Promise<UserProfile> {
+    const existing = await this.usersService.findByEmail(email);
+    if (existing) {
+      throw new ConflictException(
+        'このメールアドレスは既に登録されています。',
       );
     }
 
-    const command = new InitiateAuthCommand({
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: clientId,
-      AuthParameters: {
-        USERNAME: email,
-        PASSWORD: password,
-      },
+    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+    const user = await this.usersService.createUser({
+      email,
+      name,
+      passwordHash,
+      role: UserRole.Employee,
     });
 
-    let response;
-    try {
-      response = await this.cognitoClient.send(command);
-    } catch (error) {
-      // Cognito 由来のエラーを分類して HTTP 例外へ変換する
-      throw this.mapCognitoError(error);
-    }
+    // パスワードハッシュを含めないプロフィールとして返す。
+    return this.usersService.getProfile(user);
+  }
 
-    const result = response.AuthenticationResult;
-    if (
-      !result ||
-      !result.IdToken ||
-      !result.AccessToken ||
-      result.ExpiresIn === undefined
-    ) {
-      // チャレンジ応答（MFA 等）やトークン欠如は本 MVP では未対応のため 401 として扱う
-      this.logger.warn(
-        'Cognito から認証トークンを取得できませんでした（チャレンジ要求の可能性）。',
-      );
+  /**
+   * メールアドレス／パスワードで認証し、成功時に自己発行 JWT を返す。
+   * ユーザーが存在しない、またはパスワード照合に失敗した場合は 401 とする。
+   * （どちらの理由でも同一メッセージとし、アカウント存在の推測を防ぐ。）
+   *
+   * @param email メールアドレス
+   * @param password 平文パスワード
+   */
+  async login(email: string, password: string): Promise<LoginResponse> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user || !user.passwordHash) {
+      this.logger.warn(`ログイン失敗（該当ユーザーなし）: ${email}`);
       throw new UnauthorizedException(
         'メールアドレスまたはパスワードが正しくありません。',
       );
     }
 
-    return {
-      idToken: result.IdToken,
-      accessToken: result.AccessToken,
-      expiresIn: result.ExpiresIn,
-      tokenType: result.TokenType ?? 'Bearer',
-    };
-  }
-
-  /**
-   * アクセストークンを無効化する（要件 1.7）。
-   *
-   * Cognito のアクセストークンはステートレスな JWT だが、GlobalSignOut により
-   * サーバー側で当該ユーザーの発行済みトークンを失効させる（実質的な無効化）。
-   * 失効に失敗した場合でも、クライアントはトークンを破棄するためログアウト自体は成立する。
-   * ここでは失敗をログに残し、ユーザーには成功として扱う（要件 1.7）。
-   *
-   * @param accessToken 無効化対象のアクセストークン
-   */
-  async logout(accessToken: string): Promise<void> {
-    try {
-      await this.cognitoClient.send(
-        new GlobalSignOutCommand({ AccessToken: accessToken }),
-      );
-    } catch (error) {
-      // トークンが既に失効している等の理由で失敗しても、クライアント側破棄により
-      // ログアウトは成立するため、エラーはログに留めて握りつぶす。
-      this.logger.warn(
-        `GlobalSignOut に失敗しました（トークンは破棄されます）: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
-  }
-
-  /**
-   * Cognito のエラーを設計書の分類に従い HTTP 例外へマッピングする。
-   *
-   * Cognito のロックアウト（連続失敗）は Cognito 側が強制し、NotAuthorizedException に
-   * "Password attempts exceeded" というメッセージで通知されるため、その信号を 423 に翻訳する。
-   *
-   * @param error cognitoClient.send が送出したエラー
-   */
-  private mapCognitoError(error: unknown): HttpException {
-    const name = this.resolveErrorName(error);
-    const message = error instanceof Error ? error.message : String(error);
-
-    // ロックアウト: 連続ログイン失敗の上限超過（要件 1.4）
-    // Cognito は NotAuthorizedException のメッセージでロックを通知する。
-    if (/password attempts exceeded/i.test(message)) {
-      this.logger.warn(`ログインロックアウトを検知しました: ${message}`);
-      // NestJS には 423 Locked の専用例外・列挙値がないため、数値ステータス 423 を直接指定する。
-      return new HttpException(
-        'ログイン試行回数の上限に達しました。しばらくしてから再度お試しください。',
-        423,
-      );
-    }
-
-    // 認証失敗: 資格情報不一致・未登録（要件 1.3）
-    if (
-      name === 'NotAuthorizedException' ||
-      name === 'UserNotFoundException'
-    ) {
-      this.logger.warn(`認証に失敗しました: ${name}`);
-      return new UnauthorizedException(
+    const matched = await bcrypt.compare(password, user.passwordHash);
+    if (!matched) {
+      this.logger.warn(`ログイン失敗（パスワード不一致）: ${email}`);
+      throw new UnauthorizedException(
         'メールアドレスまたはパスワードが正しくありません。',
       );
     }
 
-    // 認証基盤障害: Cognito 無応答・内部エラー・ネットワーク等（要件 1.5）
-    this.logger.error(
-      `認証基盤でエラーが発生しました: ${name} ${message}`,
-    );
-    return new ServiceUnavailableException(
-      '現在認証を行えません。時間をおいて再度お試しください。',
-    );
+    // ログイン時点の DB ロールをトークンへ埋め込む（以後の認可判定に用いる）。
+    const issued = this.jwtTokenService.issueToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    return {
+      accessToken: issued.accessToken,
+      tokenType: issued.tokenType,
+      expiresIn: issued.expiresIn,
+    };
   }
 
   /**
-   * エラーオブジェクトから Cognito の例外名を取り出す。
-   * AWS SDK v3 は `name` に例外名を設定する。
+   * ログアウト処理。
+   *
+   * 自己発行 JWT はステートレスなため、サーバー側での失効管理は行わない。
+   * ログアウトはクライアントがトークンを破棄することで成立する（no-op）。
+   * 将来的にトークン失効リスト（ブラックリスト）を導入する場合はここで扱う。
    */
-  private resolveErrorName(error: unknown): string {
-    if (error && typeof error === 'object' && 'name' in error) {
-      const name = (error as { name?: unknown }).name;
-      if (typeof name === 'string') {
-        return name;
-      }
-    }
-    return 'UnknownError';
+  async logout(): Promise<void> {
+    // ステートレス JWT のためサーバー側処理は不要。
+    return;
   }
 }

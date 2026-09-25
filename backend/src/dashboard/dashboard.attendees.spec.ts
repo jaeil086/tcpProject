@@ -6,6 +6,7 @@ import { buildTypeOrmOptions } from '../config/typeorm.config';
 import { InitialSchema1717000000000 } from '../migrations/1717000000000-InitialSchema';
 import { Schedule } from '../entities/schedule.entity';
 import { User } from '../entities/user.entity';
+import { Team } from '../entities/team.entity';
 import { ThresholdSetting } from '../entities/threshold-setting.entity';
 import { UserRole, WorkLocation } from '../entities/enums';
 import { countOccupancy, ScheduleRecord } from '../domain/occupancy';
@@ -106,7 +107,10 @@ describe('出社者一覧の property テスト（要件 4.6）', () => {
     }
 
     // 実リポジトリで実サービスを組み立てる（DI を使わず直接インスタンス化する）。
-    const usersService = new UsersService(dataSource.getRepository(User));
+    const usersService = new UsersService(
+      dataSource.getRepository(User),
+      dataSource.getRepository(Team),
+    );
     dashboardService = new DashboardService(
       dataSource.getRepository(Schedule),
       dataSource.getRepository(User),

@@ -11,7 +11,7 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { AuthenticatedUser } from '../common/auth/cognito-token-verifier';
+import { AuthenticatedUser } from '../common/auth/jwt-token.service';
 import { UserRole } from '../entities/enums';
 import { ScheduleService } from './schedule.service';
 import { UpsertScheduleDto } from './dto/upsert-schedule.dto';

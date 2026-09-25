@@ -8,30 +8,31 @@
  *   （ダッシュボード・カレンダー等）を確認するために、DB へ最低限の初期データ
  *   （チーム／管理者ユーザー／従業員ユーザー／しきい値設定）を投入する。
  *
- *   本アプリは Cognito で認証し、ログイン後に request.user.sub（Cognito のサブ
- *   ジェクト識別子）を cognito_sub 列で DB の User に解決する。したがって
- *   ログイン後画面を確認するには、Cognito ユーザーの `sub` と一致する
- *   cognitoSub を持つ User が DB に存在している必要がある。
+ *   本アプリは自前認証方式（bcrypt によるパスワードハッシュ + 自己発行 JWT）で
+ *   認証する。ログイン後画面を確認するには、メールアドレスと（bcrypt でハッシュ化
+ *   した）パスワードを持つ User が DB に存在し、その資格情報でログインできれば良い。
+ *   cognitoSub は旧方式の名残であり、本シードでは常に null を設定する。
  *
  * 冪等性:
  *   本スクリプトは繰り返し実行しても安全（idempotent）。
  *   - チームは name で照合し、存在すれば更新・なければ作成する。
- *   - ユーザーは cognitoSub または email で照合し、存在すれば更新・なければ作成する。
+ *   - ユーザーは email で照合し、存在すれば更新・なければ作成する。
  *   - しきい値設定は 1 件も無い場合のみ既定値（上限 70／下限 30）を作成する。
  *
  * 環境変数（ユーザー投入用）:
  *   管理者ユーザー:
- *     SEED_ADMIN_COGNITO_SUB   … Cognito ユーザーの sub（必須。未設定なら管理者はスキップ）
- *     SEED_ADMIN_EMAIL         … 管理者のメールアドレス（任意。未設定なら既定値）
- *     SEED_ADMIN_NAME          … 管理者の氏名（任意。未設定なら既定値）
+ *     SEED_ADMIN_EMAIL      … 管理者のメールアドレス（任意。未設定なら 'admin@example.com'）
+ *     SEED_ADMIN_PASSWORD   … 管理者の平文パスワード（任意。未設定なら既定値 'Passw0rd!'）
+ *     SEED_ADMIN_NAME       … 管理者の氏名（任意。未設定なら既定値）
  *   従業員ユーザー:
- *     SEED_EMPLOYEE_COGNITO_SUB … Cognito ユーザーの sub（必須。未設定なら従業員はスキップ）
- *     SEED_EMPLOYEE_EMAIL       … 従業員のメールアドレス（任意。未設定なら既定値）
- *     SEED_EMPLOYEE_NAME        … 従業員の氏名（任意。未設定なら既定値）
+ *     SEED_EMPLOYEE_EMAIL    … 従業員のメールアドレス（任意。設定時のみ従業員を投入）
+ *     SEED_EMPLOYEE_PASSWORD … 従業員の平文パスワード（任意。未設定なら既定値 'Passw0rd!'）
+ *     SEED_EMPLOYEE_NAME     … 従業員の氏名（任意。未設定なら既定値）
  *
- *   Cognito の sub の確認方法:
- *     AWS マネジメントコンソール > Cognito > 対象の User Pool > 「ユーザー」
- *     > 対象ユーザーを選択 > 「sub」属性の値をコピーする。
+ *   管理者は SEED_ADMIN_EMAIL 未設定時も既定メールで必ず投入されるため、
+ *   シードを実行すれば常にログイン可能な管理者アカウントが 1 つ得られる。
+ *   パスワードが env で与えられない場合は既定値を用い、警告を出力するので、
+ *   本番では必ず SEED_ADMIN_PASSWORD を設定し、初回ログイン後に変更すること。
  *
  *   DB 接続は src/config/typeorm.config.ts が参照する DATABASE_* 環境変数で行う。
  *
@@ -52,20 +53,28 @@
  */
 
 import 'reflect-metadata';
+import * as bcrypt from 'bcrypt';
 import AppDataSource from './data-source';
 import { Team } from './entities/team.entity';
 import { User } from './entities/user.entity';
 import { ThresholdSetting } from './entities/threshold-setting.entity';
 import { UserRole } from './entities/enums';
 
+/** bcrypt のソルトラウンド数（認証サービスと揃える）。 */
+const BCRYPT_SALT_ROUNDS = 10;
+
+/** パスワード env 未設定時に用いる既定パスワード（8 文字以上）。本番では必ず変更すること。 */
+const DEFAULT_SEED_PASSWORD = 'Passw0rd!';
+
 /** 投入対象ユーザーの入力値をまとめた型 */
 interface SeedUserInput {
   /** ログ表示用のラベル（例: 管理者 / 従業員） */
   label: string;
-  cognitoSub: string;
   email: string;
   name: string;
   role: UserRole;
+  /** bcrypt でハッシュ化済みのパスワード */
+  passwordHash: string;
   /** 所属させるチーム名 */
   teamName: string;
 }
@@ -74,6 +83,33 @@ interface SeedUserInput {
 function envOrDefault(value: string | undefined, fallback: string): string {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
+
+/**
+ * パスワード env を解決し、bcrypt でハッシュ化して返す。
+ * env が未設定・空文字の場合は既定パスワードを用い、警告を出力する。
+ *
+ * @param rawPassword env から取得した平文パスワード（未設定可）
+ * @param label ログ表示用ラベル（例: 管理者）
+ * @param envName 参照した環境変数名（警告メッセージ用）
+ * @returns bcrypt ハッシュと、実際に用いた平文パスワード（ログ表示用）
+ */
+async function resolvePasswordHash(
+  rawPassword: string | undefined,
+  label: string,
+  envName: string,
+): Promise<{ passwordHash: string; usedPassword: string }> {
+  const trimmed = rawPassword?.trim();
+  const usedPassword =
+    trimmed && trimmed.length > 0 ? trimmed : DEFAULT_SEED_PASSWORD;
+  if (!trimmed || trimmed.length === 0) {
+    console.warn(
+      `[警告] ${label}の${envName} が未設定のため、既定パスワード '${DEFAULT_SEED_PASSWORD}' を使用します。` +
+        '本番環境では必ず環境変数でパスワードを設定し、初回ログイン後に変更してください。',
+    );
+  }
+  const passwordHash = await bcrypt.hash(usedPassword, BCRYPT_SALT_ROUNDS);
+  return { passwordHash, usedPassword };
 }
 
 /**
@@ -93,22 +129,24 @@ async function upsertTeam(name: string): Promise<Team> {
 }
 
 /**
- * ユーザーを cognitoSub または email で冪等に upsert する。
- * どちらかに一致する既存ユーザーがあればフィールドを更新し、無ければ新規作成する。
+ * ユーザーを email で冪等に upsert する。
+ * email に一致する既存ユーザーがあればフィールド（パスワードハッシュ含む）を更新し、
+ * 無ければ新規作成する。自前認証方式のため cognitoSub は常に null を設定する。
  */
 async function upsertUser(input: SeedUserInput, teamId: string): Promise<User> {
   const repo = AppDataSource.getRepository(User);
 
-  // cognitoSub もしくは email のいずれかに一致する既存ユーザーを探索する
+  // email に一致する既存ユーザーを探索する（email はログイン識別子）。
   const existing = await repo.findOne({
-    where: [{ cognitoSub: input.cognitoSub }, { email: input.email }],
+    where: { email: input.email },
   });
 
   if (existing) {
-    existing.cognitoSub = input.cognitoSub;
+    existing.cognitoSub = null;
     existing.email = input.email;
     existing.name = input.name;
     existing.role = input.role;
+    existing.passwordHash = input.passwordHash;
     existing.teamId = teamId;
     const updated = await repo.save(existing);
     console.log(
@@ -119,10 +157,11 @@ async function upsertUser(input: SeedUserInput, teamId: string): Promise<User> {
 
   const created = await repo.save(
     repo.create({
-      cognitoSub: input.cognitoSub,
+      cognitoSub: null,
       email: input.email,
       name: input.name,
       role: input.role,
+      passwordHash: input.passwordHash,
       teamId,
     }),
   );
@@ -178,49 +217,58 @@ async function run(): Promise<void> {
     const teamA = await upsertTeam('チームA');
     await upsertTeam('チームB');
 
-    // 2) 管理者ユーザーを投入する（SEED_ADMIN_COGNITO_SUB が必須）
-    let adminUserId: string | null = null;
-    const adminSub = process.env.SEED_ADMIN_COGNITO_SUB?.trim();
-    if (adminSub) {
-      const admin = await upsertUser(
-        {
-          label: '管理者',
-          cognitoSub: adminSub,
-          email: envOrDefault(process.env.SEED_ADMIN_EMAIL, 'admin@example.com'),
-          name: envOrDefault(process.env.SEED_ADMIN_NAME, '管理者ユーザー'),
-          role: UserRole.Administrator,
-          teamName: teamA.name,
-        },
-        teamA.id,
-      );
-      adminUserId = admin.id;
-    } else {
-      console.log(
-        '[管理者] SEED_ADMIN_COGNITO_SUB が未設定のため作成をスキップしました。\n' +
-          '  → Cognito ユーザーの sub を設定してください。' +
-          '（AWS コンソール > Cognito > User Pool > ユーザー > 対象ユーザー > 「sub」属性）',
-      );
-    }
+    // 2) 管理者ユーザーを投入する（SEED_ADMIN_EMAIL 未設定時も既定メールで必ず作成する）
+    const adminEmail = envOrDefault(
+      process.env.SEED_ADMIN_EMAIL,
+      'admin@example.com',
+    );
+    const adminPassword = await resolvePasswordHash(
+      process.env.SEED_ADMIN_PASSWORD,
+      '管理者',
+      'SEED_ADMIN_PASSWORD',
+    );
+    const admin = await upsertUser(
+      {
+        label: '管理者',
+        email: adminEmail,
+        name: envOrDefault(process.env.SEED_ADMIN_NAME, '管理者ユーザー'),
+        role: UserRole.Administrator,
+        passwordHash: adminPassword.passwordHash,
+        teamName: teamA.name,
+      },
+      teamA.id,
+    );
+    const adminUserId: string | null = admin.id;
+    console.log(
+      `[管理者] ログイン資格情報 → email: "${adminEmail}" / password: "${adminPassword.usedPassword}"`,
+    );
 
-    // 3) 従業員ユーザーを投入する（SEED_EMPLOYEE_COGNITO_SUB が必須）
-    const employeeSub = process.env.SEED_EMPLOYEE_COGNITO_SUB?.trim();
-    if (employeeSub) {
+    // 3) 従業員ユーザーを投入する（SEED_EMPLOYEE_EMAIL が指定された場合のみ）
+    const employeeEmail = process.env.SEED_EMPLOYEE_EMAIL?.trim();
+    if (employeeEmail && employeeEmail.length > 0) {
+      const employeePassword = await resolvePasswordHash(
+        process.env.SEED_EMPLOYEE_PASSWORD,
+        '従業員',
+        'SEED_EMPLOYEE_PASSWORD',
+      );
       await upsertUser(
         {
           label: '従業員',
-          cognitoSub: employeeSub,
-          email: envOrDefault(process.env.SEED_EMPLOYEE_EMAIL, 'employee@example.com'),
+          email: employeeEmail,
           name: envOrDefault(process.env.SEED_EMPLOYEE_NAME, '従業員ユーザー'),
           role: UserRole.Employee,
+          passwordHash: employeePassword.passwordHash,
           teamName: teamA.name,
         },
         teamA.id,
       );
+      console.log(
+        `[従業員] ログイン資格情報 → email: "${employeeEmail}" / password: "${employeePassword.usedPassword}"`,
+      );
     } else {
       console.log(
-        '[従業員] SEED_EMPLOYEE_COGNITO_SUB が未設定のため作成をスキップしました。\n' +
-          '  → Cognito ユーザーの sub を設定してください。' +
-          '（AWS コンソール > Cognito > User Pool > ユーザー > 対象ユーザー > 「sub」属性）',
+        '[従業員] SEED_EMPLOYEE_EMAIL が未設定のため従業員ユーザーの作成をスキップしました。' +
+          '（従業員も投入する場合は SEED_EMPLOYEE_EMAIL / SEED_EMPLOYEE_PASSWORD を設定してください）',
       );
     }
 

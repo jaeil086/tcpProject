@@ -11,14 +11,15 @@
  *   さらに AI 分析の過多／過少警告が実際に出るよう、しきい値を人数に合わせて調整する。
  *
  * 重要:
- *   - ここで作るダミー従業員は Cognito と紐付かない（cognitoSub はダミー値）。
+ *   - ここで作るダミー従業員には共通の既定パスワード（bcrypt ハッシュ）を設定するため、
+ *     必要であればログインして操作することも可能。cognitoSub は null（自前認証方式）。
  *     ダッシュボード・カレンダー・分析は DB を読むだけなので、ログインなしでも
- *     これらの画面に反映される。ログインして操作する必要はない。
+ *     これらの画面に反映される。
  *   - 既存の管理者ユーザーは変更しない（ダミー従業員のみ追加）。
  *
  * 冪等性:
  *   - チームは name で find-or-create。
- *   - 従業員は cognitoSub / email で find-or-create（再実行で重複しない）。
+ *   - 従業員は email で find-or-create（再実行で重複しない）。
  *   - 勤務予定は (userId, date) で upsert。
  *   - しきい値設定は既存があれば値のみ更新、なければ作成。
  *
@@ -30,6 +31,7 @@
  */
 
 import 'reflect-metadata';
+import * as bcrypt from 'bcrypt';
 import AppDataSource from './data-source';
 import { Team } from './entities/team.entity';
 import { User } from './entities/user.entity';
@@ -37,6 +39,12 @@ import { Schedule } from './entities/schedule.entity';
 import { ThresholdSetting } from './entities/threshold-setting.entity';
 import { UserRole, WorkLocation } from './entities/enums';
 import { resolveTargetWeek } from './domain/target-week';
+
+/** bcrypt のソルトラウンド数（認証サービスと揃える）。 */
+const BCRYPT_SALT_ROUNDS = 10;
+
+/** ダミー従業員に共通で設定する既定パスワード（8 文字以上）。ログイン確認用。 */
+const DUMMY_DEFAULT_PASSWORD = 'Passw0rd!';
 
 /** ダミー従業員の氏名一覧（日本語のダミー名）。 */
 const DUMMY_NAMES: string[] = [
@@ -98,34 +106,43 @@ async function findOrCreateTeam(name: string): Promise<Team> {
   return repo.save(repo.create({ name }));
 }
 
-/** ダミー従業員を find-or-create する（cognitoSub / email で照合）。 */
+/**
+ * ダミー従業員を find-or-create する（email で照合）。
+ * 自前認証方式のため cognitoSub は null とし、共通の既定パスワードハッシュを設定する。
+ *
+ * @param index 連番（0 始まり）
+ * @param teamId 所属チーム id
+ * @param passwordHash 全ダミー従業員で共有する bcrypt ハッシュ
+ */
 async function upsertDummyEmployee(
   index: number,
   teamId: string,
+  passwordHash: string,
 ): Promise<User> {
   const repo = AppDataSource.getRepository(User);
   const seq = String(index + 1).padStart(2, '0');
-  const cognitoSub = `dummy-emp-${seq}`;
   const email = `dummy-emp-${seq}@example.com`;
   const name = DUMMY_NAMES[index] ?? `ダミー従業員${seq}`;
 
   const existing = await repo.findOne({
-    where: [{ cognitoSub }, { email }],
+    where: { email },
   });
   if (existing) {
-    existing.cognitoSub = cognitoSub;
+    existing.cognitoSub = null;
     existing.email = email;
     existing.name = name;
     existing.role = UserRole.Employee;
+    existing.passwordHash = passwordHash;
     existing.teamId = teamId;
     return repo.save(existing);
   }
   return repo.save(
     repo.create({
-      cognitoSub,
+      cognitoSub: null,
       email,
       name,
       role: UserRole.Employee,
+      passwordHash,
       teamId,
     }),
   );
@@ -206,14 +223,22 @@ async function run(): Promise<void> {
     }
     console.log(`[チーム] 用意: ${teamNames.join(' / ')}`);
 
-    // 2) ダミー従業員を作成する。
+    // 2) ダミー従業員を作成する（全員に共通の既定パスワードハッシュを設定）。
+    const dummyPasswordHash = await bcrypt.hash(
+      DUMMY_DEFAULT_PASSWORD,
+      BCRYPT_SALT_ROUNDS,
+    );
     const employees: User[] = [];
     for (let i = 0; i < DUMMY_NAMES.length; i++) {
       const teamName = teamNameForIndex(i, teamNames);
       const team = teams.find((t) => t.name === teamName) ?? teams[0];
-      employees.push(await upsertDummyEmployee(i, team.id));
+      employees.push(await upsertDummyEmployee(i, team.id, dummyPasswordHash));
     }
     console.log(`[従業員] ${employees.length} 名を作成／更新しました。`);
+    console.log(
+      `[従業員] 全ダミー従業員の既定パスワード: "${DUMMY_DEFAULT_PASSWORD}"` +
+        '（email は dummy-emp-01@example.com 形式。ログイン確認に利用可能）',
+    );
 
     // 3) 勤務予定を投入する。曜日ごとの出社率に従って office/remote を決める。
     let scheduleCount = 0;

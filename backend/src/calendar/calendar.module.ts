@@ -14,8 +14,8 @@ import { CalendarService } from './calendar.service';
  * チーム単位の週次勤務予定の集約（GET /calendar）を提供する。
  * - Schedule / User エンティティを forFeature で登録する。
  * - CommonModule を import し、CalendarController の `@UseGuards(JwtAuthGuard)` が
- *   依存する CognitoTokenVerifier / JwtAuthGuard を DI で解決できるようにする。
- * - UsersModule を import し、Cognito サブジェクト識別子からリクエストユーザー（自チーム解決）を
+ *   依存する JwtTokenService / JwtAuthGuard を DI で解決できるようにする。
+ * - UsersModule を import し、トークン由来の userId からリクエストユーザー（自チーム解決）を
  *   得る UsersService を利用する（要件 3.4）。
  * - TeamsModule を import し、チーム別メンバー取得（チームフィルタ）を行う TeamsService を利用する（要件 3.3）。
  */

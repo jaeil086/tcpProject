@@ -55,17 +55,29 @@ export interface LoginRequest {
 }
 
 /**
+ * POST /auth/register のリクエストボディ。
+ * 自己管理型認証でのアカウント新規登録に用いる。
+ */
+export interface RegisterRequest {
+  /** メールアドレス */
+  email: string;
+  /** パスワード（8 文字以上） */
+  password: string;
+  /** 氏名 */
+  name: string;
+}
+
+/**
  * POST /auth/login のレスポンス（backend LoginResponse に一致、要件 1.2）。
+ * 自己管理型 JWT 認証へ移行したため、返却されるのはアクセストークン関連のみ。
  */
 export interface LoginResponse {
-  /** ID トークン（ユーザー属性クレームを含む JWT） */
-  idToken: string;
   /** アクセストークン（保護 API へのアクセスに用いる JWT） */
   accessToken: string;
-  /** アクセストークンの有効期限（秒） */
-  expiresIn: number;
   /** トークン種別（通常は "Bearer"） */
   tokenType: string;
+  /** アクセストークンの有効期限（秒） */
+  expiresIn: number;
 }
 
 /**
@@ -83,8 +95,8 @@ export interface LogoutResponse {
 export interface UserProfile {
   /** アプリ内ユーザー ID（UUID） */
   id: string;
-  /** Cognito のサブジェクト識別子 */
-  cognitoSub: string;
+  /** Cognito のサブジェクト識別子（自己管理型認証では null） */
+  cognitoSub: string | null;
   /** メールアドレス */
   email: string;
   /** 氏名 */
@@ -109,6 +121,46 @@ export interface Team {
   id: string;
   /** チーム名 */
   name: string;
+}
+
+// ---------------------------------------------------------------------------
+// 管理者向けユーザー管理（Admin Users API）
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /users が返す管理者向けユーザー 1 件分（backend AdminUserView に一致）。
+ * 管理画面でのロール変更・チーム割り当ての対象となる。
+ */
+export interface AdminUserView {
+  /** アプリ内ユーザー ID（UUID） */
+  id: string;
+  /** メールアドレス */
+  email: string;
+  /** 氏名 */
+  name: string;
+  /** ロール（employee / administrator） */
+  role: UserRole;
+  /** 所属チーム ID（未所属の場合は null） */
+  teamId: string | null;
+  /** 所属チーム名（未所属または未解決の場合は null） */
+  teamName: string | null;
+}
+
+/**
+ * PUT /users/:id/team のリクエストボディ。
+ * teamId が null の場合はチーム未所属に更新する。
+ */
+export interface AssignTeamRequest {
+  /** 割り当てるチーム ID（未所属にする場合は null） */
+  teamId: string | null;
+}
+
+/**
+ * PUT /users/:id/role のリクエストボディ。
+ */
+export interface UpdateRoleRequest {
+  /** 変更後のロール（employee / administrator） */
+  role: UserRole;
 }
 
 // ---------------------------------------------------------------------------

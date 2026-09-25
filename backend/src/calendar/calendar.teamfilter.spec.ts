@@ -70,8 +70,10 @@ describe('カレンダー集約のチームフィルタ property テスト（要
   // 実コードパスを通すため、DataSource のリポジトリで実サービスを組み立てる。
   let calendarService: CalendarService;
 
-  // リクエストユーザー（任意チーム所属。teamId 明示指定でフィルタするため所属は結果に影響しない）。
-  const requesterSub = 'teamfilter-requester-001';
+  // リクエストユーザーのメール（任意チーム所属。teamId 明示指定でフィルタするため所属は結果に影響しない）。
+  const requesterEmail = 'teamfilter-requester-001@example.com';
+  // 投入後に確定するリクエストユーザーの内部 userId（サービス呼び出しに使う）。
+  let requesterId: string;
 
   // 投入したチーム ID 群（property で選択チームを生成する対象）。
   let seededTeamIds: string[] = [];
@@ -107,7 +109,10 @@ describe('カレンダー集約のチームフィルタ property テスト（要
     }
 
     // 実リポジトリで実サービスを組み立てる（DI を使わず直接インスタンス化する）。
-    const usersService = new UsersService(dataSource.getRepository(User));
+    const usersService = new UsersService(
+      dataSource.getRepository(User),
+      dataSource.getRepository(Team),
+    );
     const teamsService = new TeamsService(
       dataSource.getRepository(Team),
       dataSource.getRepository(User),
@@ -161,15 +166,17 @@ describe('カレンダー集約のチームフィルタ property テスト（要
 
     // リクエストユーザーを投入する（teamId を明示指定するため、所属チームは結果に影響しない）。
     // role は NOT NULL（DB 既定値なし）のため明示的に設定する。
-    await userRepository.save(
+    const requester = await userRepository.save(
       userRepository.create({
-        cognitoSub: requesterSub,
-        email: 'teamfilter-requester-001@example.com',
+        email: requesterEmail,
         name: 'フィルタ検証太郎',
+        passwordHash: 'dummy-hash',
         role: UserRole.Employee,
         teamId: seededTeamIds[0],
       }),
     );
+    // サービスはトークン由来の userId で解決するため、投入後の内部 id を保持する。
+    requesterId = requester.id;
   });
 
   afterAll(async () => {
@@ -204,7 +211,7 @@ describe('カレンダー集約のチームフィルタ property テスト（要
         fc.constantFrom(...seededTeamIds),
         async (selectedTeamId) => {
           const calendar = await calendarService.getTeamCalendar(
-            requesterSub,
+            requesterId,
             selectedTeamId,
           );
 

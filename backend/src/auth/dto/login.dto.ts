@@ -7,8 +7,8 @@ import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
  * - email: メールアドレス形式であること
  * - password: 空でない文字列であること
  *
- * 認証そのもの（資格情報の照合）は AWS Cognito が担うため、本 DTO では
- * 形式レベルの検証のみを行い、パスワード強度などは検証しない（要件 1.2）。
+ * ログインでは資格情報の照合を AuthService（bcrypt）が担うため、本 DTO では
+ * 形式レベルの検証のみを行い、パスワード強度は検証しない（強度は登録時に検証する）。
  */
 export class LoginDto {
   /** ログインに用いるメールアドレス */

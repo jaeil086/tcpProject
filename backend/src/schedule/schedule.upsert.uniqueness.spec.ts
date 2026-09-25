@@ -6,6 +6,7 @@ import { buildTypeOrmOptions } from '../config/typeorm.config';
 import { InitialSchema1717000000000 } from '../migrations/1717000000000-InitialSchema';
 import { Schedule } from '../entities/schedule.entity';
 import { User } from '../entities/user.entity';
+import { Team } from '../entities/team.entity';
 import { UserRole, WorkLocation } from '../entities/enums';
 import { resolveTargetWeek } from '../domain/target-week';
 import { UsersService } from '../users/users.service';
@@ -68,9 +69,9 @@ describe('勤務予定 upsert の単一性 property テスト（要件 2.4、2.7
   // 実コードパスを通すため、DataSource のリポジトリで実サービスを組み立てる。
   let scheduleService: ScheduleService;
   let usersService: UsersService;
-  // 単一性検証の対象ユーザー（既知の cognitoSub で解決させる）。
-  const cognitoSub = 'uniqueness-sub-001';
-  // 解決済みの内部 userId（beforeAll で確定させ、行数カウントの where 条件に使う）。
+  // 単一性検証の対象ユーザー（既知のメールアドレスで解決させる）。
+  const userEmail = 'uniqueness-001@example.com';
+  // 解決済みの内部 userId（beforeAll で確定させ、サービス呼び出し・行数カウントに使う）。
   let userId: string;
 
   beforeAll(async () => {
@@ -102,24 +103,27 @@ describe('勤務予定 upsert の単一性 property テスト（要件 2.4、2.7
     }
 
     // 実リポジトリで実サービスを組み立てる（DI を使わず直接インスタンス化する）。
-    usersService = new UsersService(dataSource.getRepository(User));
+    usersService = new UsersService(
+      dataSource.getRepository(User),
+      dataSource.getRepository(Team),
+    );
     scheduleService = new ScheduleService(
       dataSource.getRepository(Schedule),
       usersService,
     );
 
-    // 対象ユーザーを 1 件投入し、findByCognitoSub で解決できるようにする。
+    // 対象ユーザーを 1 件投入し、findByEmail で解決できるようにする。
     // role は NOT NULL（DB 既定値なし）のため明示的に設定する。
     await dataSource.getRepository(User).insert({
-      cognitoSub,
-      email: 'uniqueness-001@example.com',
+      email: userEmail,
       name: '単一性検証太郎',
+      passwordHash: 'dummy-hash',
       role: UserRole.Employee,
       teamId: null,
     });
 
     // 行数カウント（where: { userId, date }）に使う内部 userId を解決しておく。
-    const user = await usersService.findByCognitoSub(cognitoSub);
+    const user = await usersService.findByEmail(userEmail);
     if (!user) {
       throw new Error('テスト用ユーザーの投入・解決に失敗しました。');
     }
@@ -173,7 +177,7 @@ describe('勤務予定 upsert の単一性 property テスト（要件 2.4、2.7
           // 生成された操作列を順に適用する（各操作は同一 (user, date) への upsert）。
           for (const workLocation of workLocationSequence) {
             const upsertResult = await scheduleService.upsertMySchedule(
-              cognitoSub,
+              userId,
               date,
               workLocation,
             );
@@ -189,7 +193,7 @@ describe('勤務予定 upsert の単一性 property テスト（要件 2.4、2.7
           // (b) 保持される勤務区分は操作列の最後の値と一致すること。
           const lastWorkLocation =
             workLocationSequence[workLocationSequence.length - 1];
-          const week = await scheduleService.getMyWeekSchedule(cognitoSub);
+          const week = await scheduleService.getMyWeekSchedule(userId);
           const entry = week.days.find((day) => day.date === date);
           expect(entry).toBeDefined();
           expect(entry?.workLocation).toBe(lastWorkLocation);

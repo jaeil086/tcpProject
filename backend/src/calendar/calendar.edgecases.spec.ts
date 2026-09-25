@@ -53,12 +53,12 @@ function makeRequester(cognitoSub: string, teamId: string | null): User {
 
 // モックした依存で CalendarService を組み立てるヘルパー。
 function buildService(overrides: {
-  findByCognitoSub: jest.Mock;
+  findById: jest.Mock;
   getMembersByTeam?: jest.Mock;
   find?: jest.Mock;
 }): CalendarService {
   const usersService = {
-    findByCognitoSub: overrides.findByCognitoSub,
+    findById: overrides.findById,
   } as unknown as UsersService;
 
   const teamsService = {
@@ -86,7 +86,7 @@ describe('カレンダー集約の例示・エッジケーステスト（要件 
     ];
 
     const service = buildService({
-      findByCognitoSub: jest.fn().mockResolvedValue(makeRequester(requesterSub, teamId)),
+      findById: jest.fn().mockResolvedValue(makeRequester(requesterSub, teamId)),
       getMembersByTeam: jest.fn().mockResolvedValue(members),
       // 登録済みの勤務予定は 1 件も存在しない。
       find: jest.fn().mockResolvedValue([]),
@@ -122,7 +122,7 @@ describe('カレンダー集約の例示・エッジケーステスト（要件 
     const find = jest.fn();
 
     const service = buildService({
-      findByCognitoSub: jest.fn().mockResolvedValue(makeRequester(requesterSub, null)),
+      findById: jest.fn().mockResolvedValue(makeRequester(requesterSub, null)),
       getMembersByTeam,
       find,
     });
@@ -152,7 +152,7 @@ describe('カレンダー集約の例示・エッジケーステスト（要件 
     const fetchError = new Error('スケジュール取得に失敗しました');
 
     const service = buildService({
-      findByCognitoSub: jest.fn().mockResolvedValue(makeRequester(requesterSub, teamId)),
+      findById: jest.fn().mockResolvedValue(makeRequester(requesterSub, teamId)),
       getMembersByTeam: jest.fn().mockResolvedValue(members),
       // 取得失敗を模擬する。
       find: jest.fn().mockRejectedValue(fetchError),
@@ -166,7 +166,7 @@ describe('カレンダー集約の例示・エッジケーステスト（要件 
   // 境界: リクエストユーザーが未解決（DB 未同期）のとき、ForbiddenException を伝播する。
   it('リクエストユーザーが解決できないとき、ForbiddenException を伝播する', async () => {
     const service = buildService({
-      findByCognitoSub: jest.fn().mockResolvedValue(null),
+      findById: jest.fn().mockResolvedValue(null),
     });
 
     await expect(service.getTeamCalendar(requesterSub)).rejects.toBeInstanceOf(

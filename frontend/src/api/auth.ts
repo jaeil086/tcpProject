@@ -6,12 +6,21 @@ import type {
   LoginRequest,
   LoginResponse,
   LogoutResponse,
+  RegisterRequest,
   UserProfile,
 } from '../types';
 
 /**
+ * POST /auth/register
+ * 自己管理型認証でアカウントを新規登録し、登録済みユーザーのプロフィールを返す。
+ */
+export function register(body: RegisterRequest): Promise<UserProfile> {
+  return apiClient.post<UserProfile>('/auth/register', body);
+}
+
+/**
  * POST /auth/login
- * メールアドレス／パスワードで Cognito 認証を行い、トークンを返す（要件 1.2）。
+ * メールアドレス／パスワードで認証を行い、アクセストークンを返す（要件 1.2）。
  */
 export function login(body: LoginRequest): Promise<LoginResponse> {
   return apiClient.post<LoginResponse>('/auth/login', body);

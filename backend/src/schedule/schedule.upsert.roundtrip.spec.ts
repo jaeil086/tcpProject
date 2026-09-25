@@ -6,6 +6,7 @@ import { buildTypeOrmOptions } from '../config/typeorm.config';
 import { InitialSchema1717000000000 } from '../migrations/1717000000000-InitialSchema';
 import { Schedule } from '../entities/schedule.entity';
 import { User } from '../entities/user.entity';
+import { Team } from '../entities/team.entity';
 import { UserRole, WorkLocation } from '../entities/enums';
 import { resolveTargetWeek } from '../domain/target-week';
 import { UsersService } from '../users/users.service';
@@ -29,8 +30,8 @@ import { ScheduleService } from './schedule.service';
  * 決定性の確保:
  *  - ScheduleService はサーバー現在日から Target_Week を導出して範囲検証を行うため、
  *    テスト日付は resolveTargetWeek(today) が返す 7 日のいずれかから生成し、常に範囲内にする。
- *  - UsersService.findByCognitoSub が userId を解決できるよう、既知の cognitoSub を持つ
- *    User 行を事前に投入する。
+ *  - サービスへ渡す userId を解決できるよう、既知のメールアドレスを持つ User 行を
+ *    事前に投入し、findByEmail で内部 id を取得する。
  */
 
 // テスト用の接続オプション。TEST_DATABASE_* を優先し、なければ DATABASE_* / 既定値を使う。
@@ -67,8 +68,10 @@ describe('勤務予定 upsert の統合テスト（round-trip、要件 2.1）', 
 
   // 実コードパスを通すため、DataSource のリポジトリで実サービスを組み立てる。
   let scheduleService: ScheduleService;
-  // round-trip の対象ユーザー（既知の cognitoSub で解決させる）。
-  const cognitoSub = 'roundtrip-sub-001';
+  // round-trip の対象ユーザー（既知のメールアドレスで解決させる）。
+  const userEmail = 'roundtrip-001@example.com';
+  // 解決済みの内部 userId（beforeAll で確定させ、サービス呼び出しに使う）。
+  let userId: string;
 
   beforeAll(async () => {
     // まず接続を試み、失敗した場合はスキップ理由を記録する。
@@ -99,21 +102,31 @@ describe('勤務予定 upsert の統合テスト（round-trip、要件 2.1）', 
     }
 
     // 実リポジトリで実サービスを組み立てる（DI を使わず直接インスタンス化する）。
-    const usersService = new UsersService(dataSource.getRepository(User));
+    const usersService = new UsersService(
+      dataSource.getRepository(User),
+      dataSource.getRepository(Team),
+    );
     scheduleService = new ScheduleService(
       dataSource.getRepository(Schedule),
       usersService,
     );
 
-    // round-trip の対象ユーザーを 1 件投入し、findByCognitoSub で解決できるようにする。
+    // round-trip の対象ユーザーを 1 件投入し、findByEmail で解決できるようにする。
     // role は NOT NULL（DB 既定値なし）のため明示的に設定する。
     await dataSource.getRepository(User).insert({
-      cognitoSub,
-      email: 'roundtrip-001@example.com',
+      email: userEmail,
       name: 'ラウンドトリップ太郎',
+      passwordHash: 'dummy-hash',
       role: UserRole.Employee,
       teamId: null,
     });
+
+    // サービス呼び出しに使う内部 userId を解決しておく。
+    const user = await usersService.findByEmail(userEmail);
+    if (!user) {
+      throw new Error('テスト用ユーザーの投入・解決に失敗しました。');
+    }
+    userId = user.id;
   });
 
   afterAll(async () => {
@@ -154,14 +167,14 @@ describe('勤務予定 upsert の統合テスト（round-trip、要件 2.1）', 
         async (date, workLocation) => {
           // 登録・更新（同一 (user, date) の upsert は冪等なので run 間の状態が安定する）。
           const upsertResult = await scheduleService.upsertMySchedule(
-            cognitoSub,
+            userId,
             date,
             workLocation,
           );
           expect(upsertResult.success).toBe(true);
 
           // 照会し、対象日のエントリが書き込んだ勤務区分と一致することを検証する。
-          const week = await scheduleService.getMyWeekSchedule(cognitoSub);
+          const week = await scheduleService.getMyWeekSchedule(userId);
           const entry = week.days.find((day) => day.date === date);
           expect(entry).toBeDefined();
           expect(entry?.workLocation).toBe(workLocation);

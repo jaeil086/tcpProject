@@ -37,6 +37,11 @@ export interface AuthContextValue {
   isLoading: boolean;
   /** メール／パスワードでログインする（要件 1.2）。失敗時は ApiError を送出する。 */
   login: (email: string, password: string) => Promise<void>;
+  /**
+   * アカウントを新規登録し、続けて自動ログインする。
+   * 失敗時は ApiError を送出する（登録・ログインいずれの失敗も呼び出し側で分岐する）。
+   */
+  register: (email: string, password: string, name: string) => Promise<void>;
   /** ログアウトする（要件 1.7）。トークンとユーザーを破棄する。 */
   logout: () => Promise<void>;
 }
@@ -138,6 +143,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 新規登録処理: /auth/register でアカウントを作成し、続けて自動ログインする。
+  // 登録成功後に既存の login フローを再利用することで、トークン保存とプロフィール取得を一貫させる。
+  const register = useCallback(
+    async (email: string, password: string, name: string): Promise<void> => {
+      // register 自体はプロフィールを返すが、状態確定は login フロー（トークン保存＋getMe）に委ねる。
+      await authApi.register({ email, password, name });
+      await login(email, password);
+    },
+    [login],
+  );
+
   // ログアウト処理: /auth/logout を呼びトークンとユーザーを破棄する（要件 1.7）。
   const logout = useCallback(async (): Promise<void> => {
     try {
@@ -158,9 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: Boolean(token && user),
       isLoading,
       login,
+      register,
       logout,
     }),
-    [user, token, isLoading, login, logout],
+    [user, token, isLoading, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

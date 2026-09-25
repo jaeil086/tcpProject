@@ -13,7 +13,7 @@
 // - 送信処理中は二重送信を防ぐためボタンを無効化する。
 
 import { useState, type FormEvent } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ApiError } from '../../api';
 import { useAuth } from '../../auth';
 
@@ -133,6 +133,14 @@ export function LoginPage() {
             {isSubmitting ? 'ログイン中...' : 'ログイン'}
           </button>
         </form>
+
+        {/* 新規登録画面への導線 */}
+        <p className="mt-6 text-center text-sm text-gray-600">
+          アカウントをお持ちでない方は{' '}
+          <Link to="/register" className="font-medium text-blue-600 hover:underline">
+            新規登録
+          </Link>
+        </p>
       </div>
     </div>
   );

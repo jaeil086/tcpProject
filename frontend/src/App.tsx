@@ -2,10 +2,12 @@ import { Routes, Route } from 'react-router-dom';
 import { ProtectedRoute } from './auth';
 import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './features/login/LoginPage';
+import { RegisterPage } from './features/register/RegisterPage';
 import { ScheduleEditor } from './features/schedule/ScheduleEditor';
 import { TeamCalendar } from './features/calendar/TeamCalendar';
 import { AdminDashboard } from './features/dashboard/AdminDashboard';
 import { AnalysisPanel } from './features/analysis/AnalysisPanel';
+import { UserManagement } from './features/admin/UserManagement';
 import { UserRole } from './types';
 
 // ルーティング定義
@@ -18,6 +20,9 @@ function App() {
     <Routes>
       {/* ログイン画面（公開ルート。共通ナビは表示しない） */}
       <Route path="/login" element={<LoginPage />} />
+
+      {/* 新規登録画面（公開ルート。共通ナビは表示しない） */}
+      <Route path="/register" element={<RegisterPage />} />
 
       {/* 認証済み画面の共通レイアウト（要認証・全ロール） */}
       <Route
@@ -49,6 +54,16 @@ function App() {
           element={
             <ProtectedRoute requiredRole={UserRole.Administrator}>
               <AnalysisPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ユーザー管理: 管理者専用 */}
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute requiredRole={UserRole.Administrator}>
+              <UserManagement />
             </ProtectedRoute>
           }
         />

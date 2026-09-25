@@ -138,12 +138,12 @@ export class ScheduleService {
   }
 
   /**
-   * Cognito サブジェクト識別子から DB ユーザーの内部 ID（UUID）を解決する。
-   * DB に該当ユーザーが存在しない場合、Cognito 上は有効でもアプリ側で未同期のため、
-   * 「me」操作を許可できない。403（Forbidden）として拒否する。
+   * トークン由来のユーザー id から DB ユーザーの内部 ID（UUID）を解決する。
+   * DB に該当ユーザーが存在しない場合（削除済み等）は「me」操作を許可できないため、
+   * 403（Forbidden）として拒否する。
    */
-  private async resolveUserId(cognitoSub: string): Promise<string> {
-    const user = await this.usersService.findByCognitoSub(cognitoSub);
+  private async resolveUserId(requesterId: string): Promise<string> {
+    const user = await this.usersService.findById(requesterId);
     if (!user) {
       throw new ForbiddenException(
         'このユーザーはシステムに登録されていないため、操作を実行できません。',

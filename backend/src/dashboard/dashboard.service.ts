@@ -156,7 +156,7 @@ export class DashboardService {
    * @param lower 出社下限しきい値
    */
   async updateThreshold(
-    cognitoSub: string,
+    adminId: string,
     upper: number,
     lower: number,
   ): Promise<ThresholdResponse> {
@@ -169,8 +169,8 @@ export class DashboardService {
       throw new BadRequestException(message);
     }
 
-    // 更新者（Administrator）を DB ユーザーとして解決する。未同期ユーザーは操作不可（403）。
-    const admin = await this.usersService.findByCognitoSub(cognitoSub);
+    // 更新者（Administrator）を DB ユーザーとして解決する。存在しないユーザーは操作不可（403）。
+    const admin = await this.usersService.findById(adminId);
     if (!admin) {
       throw new ForbiddenException(
         'このユーザーはシステムに登録されていないため、操作を実行できません。',

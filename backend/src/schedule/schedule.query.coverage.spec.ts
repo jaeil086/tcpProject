@@ -6,6 +6,7 @@ import { buildTypeOrmOptions } from '../config/typeorm.config';
 import { InitialSchema1717000000000 } from '../migrations/1717000000000-InitialSchema';
 import { Schedule } from '../entities/schedule.entity';
 import { User } from '../entities/user.entity';
+import { Team } from '../entities/team.entity';
 import { UserRole, WorkLocation } from '../entities/enums';
 import { resolveTargetWeek } from '../domain/target-week';
 import { UsersService } from '../users/users.service';
@@ -68,9 +69,9 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
   // 実コードパスを通すため、DataSource のリポジトリで実サービスを組み立てる。
   let scheduleService: ScheduleService;
   let usersService: UsersService;
-  // 網羅性検証の対象ユーザー（既知の cognitoSub で解決させる）。
-  const cognitoSub = 'coverage-sub-001';
-  // 解決済みの内部 userId（run 前の全予定削除に使う）。
+  // 網羅性検証の対象ユーザー（既知のメールアドレスで解決させる）。
+  const userEmail = 'coverage-001@example.com';
+  // 解決済みの内部 userId（サービス呼び出し・run 前の全予定削除に使う）。
   let userId: string;
 
   beforeAll(async () => {
@@ -102,24 +103,27 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
     }
 
     // 実リポジトリで実サービスを組み立てる（DI を使わず直接インスタンス化する）。
-    usersService = new UsersService(dataSource.getRepository(User));
+    usersService = new UsersService(
+      dataSource.getRepository(User),
+      dataSource.getRepository(Team),
+    );
     scheduleService = new ScheduleService(
       dataSource.getRepository(Schedule),
       usersService,
     );
 
-    // 対象ユーザーを 1 件投入し、findByCognitoSub で解決できるようにする。
+    // 対象ユーザーを 1 件投入し、findByEmail で解決できるようにする。
     // role は NOT NULL（DB 既定値なし）のため明示的に設定する。
     await dataSource.getRepository(User).insert({
-      cognitoSub,
-      email: 'coverage-001@example.com',
+      email: userEmail,
       name: '網羅性検証太郎',
+      passwordHash: 'dummy-hash',
       role: UserRole.Employee,
       teamId: null,
     });
 
-    // run 前の全予定削除（where: { userId }）に使う内部 userId を解決しておく。
-    const user = await usersService.findByCognitoSub(cognitoSub);
+    // サービス呼び出し・run 前の全予定削除（where: { userId }）に使う内部 userId を解決しておく。
+    const user = await usersService.findByEmail(userEmail);
     if (!user) {
       throw new Error('テスト用ユーザーの投入・解決に失敗しました。');
     }
@@ -181,7 +185,7 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
 
           for (const [date, workLocation] of expectedByDate) {
             const upsertResult = await scheduleService.upsertMySchedule(
-              cognitoSub,
+              userId,
               date,
               workLocation,
             );
@@ -189,7 +193,7 @@ describe('勤務予定照会の網羅性 property テスト（要件 2.6、3.6�
           }
 
           // 照会結果を取得する。
-          const week = await scheduleService.getMyWeekSchedule(cognitoSub);
+          const week = await scheduleService.getMyWeekSchedule(userId);
 
           // (a) 7 日分ちょうどを、Target_Week の日付順で網羅していること。
           expect(week.days).toHaveLength(dates.length);
