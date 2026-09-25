@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { CognitoTokenVerifier } from './auth/cognito-token-verifier';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { UsersModule } from '../users/users.module';
 
 /**
  * 共通基盤モジュール。
@@ -12,10 +13,15 @@ import { RolesGuard } from './guards/roles.guard';
  * 当該モジュールの DI コンテキストで解決できるようにするため、本モジュールを
  * import して依存を注入可能にする。
  *
+ * JwtAuthGuard は cognito_sub から DB ユーザーのロールを解決するため UsersService に
+ * 依存する。そのため UsersModule を import する（UsersModule は UsersService を
+ * エクスポートしている）。UsersModule は CommonModule を import しないため循環依存は生じない。
+ *
  * 例外フィルタ（HttpExceptionFilter）は APP_FILTER としてルートモジュール側で
  * グローバル登録するため、本モジュールには含めない。
  */
 @Module({
+  imports: [UsersModule],
   providers: [CognitoTokenVerifier, JwtAuthGuard, RolesGuard],
   exports: [CognitoTokenVerifier, JwtAuthGuard, RolesGuard],
 })
