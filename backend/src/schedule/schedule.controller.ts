@@ -1,18 +1,7 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+﻿import { Body, Controller, Get, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { Roles } from '../common/decorators/roles.decorator';
-import { RolesGuard } from '../common/guards/roles.guard';
 import { AuthenticatedUser } from '../common/auth/jwt-token.service';
-import { UserRole } from '../entities/enums';
 import { ScheduleService } from './schedule.service';
 import { UpsertScheduleDto } from './dto/upsert-schedule.dto';
 import {
@@ -27,16 +16,19 @@ import {
  * - PUT /schedules/me: 自身の特定日の勤務予定を upsert する（要件 2.1、2.4）。
  * - GET /schedules/me: 自身の Target_Week 平日 5 日分を返す（要件 2.6）。
  *
- * 認可（設計書 API 一覧「要認証（Employee）」）:
- * - JwtAuthGuard で認証必須とし、RolesGuard + @Roles(Employee) で Employee ロールに限定する。
+ * 認可:
+ * - JwtAuthGuard で認証必須とする（ロール制限は設けない）。
+ *   勤務予定の登録・照会は「自分自身（me）」のデータのみを対象とするため、
+ *   管理者・従業員のいずれのロールでも自分の勤務予定を登録・照会できる。
+ *   （管理者も一従業員として出社／在宅を登録できるようにするための方針。
+ *     全体管理機能であるダッシュボード・AI 分析・ユーザー管理は引き続き管理者専用。）
  * - 対象ユーザーは常にトークンの sub（request.user.sub）で決まる「me」セマンティクスとし、
  *   他ユーザーの予定は操作できない。DB ユーザーへの解決はサービス層で行う。
  *
  * コントローラは薄く保ち、検証・永続化・sub→userId 解決はすべて ScheduleService に委譲する。
  */
 @Controller('schedules')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.Employee)
+@UseGuards(JwtAuthGuard)
 export class ScheduleController {
   constructor(private readonly scheduleService: ScheduleService) {}
 
@@ -74,7 +66,7 @@ export class ScheduleController {
   }
 
   /**
-   * JwtAuthGuard が付与した認証情報から Cognito サブジェクト識別子（sub）を取り出す。
+   * JwtAuthGuard が付与した認証情報からユーザー識別子（sub）を取り出す。
    * ガードを通過している前提のため通常は存在するが、防御的に空文字を許容する。
    */
   private getCognitoSub(request: Request): string {
