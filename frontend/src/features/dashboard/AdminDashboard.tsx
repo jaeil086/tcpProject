@@ -303,7 +303,7 @@ export function AdminDashboard() {
                       scope="row"
                       className="px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
                     >
-                      在宅率
+                      テレワーク率
                     </th>
                     {days.map((day) => (
                       <td

@@ -3,7 +3,7 @@
 //
 // 検証観点:
 // - 未登録表示: workLocation=null の日に「未登録」インジケータが出る（要件 2.6/3.6 近傍）。
-// - フォーム一次バリデーション: 選択肢は「出社」「在宅」の 2 値のみで、対象は
+// - フォーム一次バリデーション: 選択肢は「出社」「テレワーク」の 2 値のみで、対象は
 //   Target_Week の平日 5 日のみ（自由入力の日付欄が無い）である（要件 2.3、2.5 の一次抑止）。
 //   「出社」選択で upsertMySchedule が { date, workLocation: 'office' } で呼ばれる。
 // - 保存失敗時の既存表示不変: 保存が ApiError で失敗しても日本語メッセージを表示しつつ、
@@ -72,26 +72,26 @@ describe('ScheduleEditor', () => {
     // 未登録（null）の 3 日分（水・木・金）に「未登録」インジケータが出る。
     expect(screen.getAllByText('未登録')).toHaveLength(3);
 
-    // 月曜（office）は「出社」ボタンが押下状態、「在宅」は非押下。
+    // 月曜（office）は「出社」ボタンが押下状態、「テレワーク」は非押下。
     const mondayGroup = screen.getByRole('group', { name: '5月13日（月）の勤務区分' });
     expect(within(mondayGroup).getByRole('button', { name: '出社' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(within(mondayGroup).getByRole('button', { name: '在宅' })).toHaveAttribute(
+    expect(within(mondayGroup).getByRole('button', { name: 'テレワーク' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );
 
-    // 火曜（remote）は「在宅」ボタンが押下状態。
+    // 火曜（remote）は「テレワーク」ボタンが押下状態。
     const tuesdayGroup = screen.getByRole('group', { name: '5月14日（火）の勤務区分' });
-    expect(within(tuesdayGroup).getByRole('button', { name: '在宅' })).toHaveAttribute(
+    expect(within(tuesdayGroup).getByRole('button', { name: 'テレワーク' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
   });
 
-  it('選択肢は「出社」「在宅」の 2 値のみ・対象は平日 5 日のみで、「出社」選択で upsert が正しい引数で呼ばれる', async () => {
+  it('選択肢は「出社」「テレワーク」の 2 値のみ・対象は平日 5 日のみで、「出社」選択で upsert が正しい引数で呼ばれる', async () => {
     const mocks = await getMocks();
     mocks.getMySchedule.mockResolvedValue(WEEK_SCHEDULE);
     mocks.upsertMySchedule.mockResolvedValue({
@@ -105,9 +105,9 @@ describe('ScheduleEditor', () => {
 
     await screen.findByRole('group', { name: '5月13日（月）の勤務区分' });
 
-    // 選択肢は「出社」「在宅」の 2 値のみ（1 日 2 ボタン × 平日 5 日）。
+    // 選択肢は「出社」「テレワーク」の 2 値のみ（1 日 2 ボタン × 平日 5 日）。
     expect(screen.getAllByRole('button', { name: '出社' })).toHaveLength(5);
-    expect(screen.getAllByRole('button', { name: '在宅' })).toHaveLength(5);
+    expect(screen.getAllByRole('button', { name: 'テレワーク' })).toHaveLength(5);
     // office/remote 以外の勤務区分の選択肢は DOM に存在しない（一次抑止）。
     expect(screen.queryByRole('button', { name: '休暇' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '出張' })).not.toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('ScheduleEditor', () => {
     await screen.findByRole('group', { name: '5月13日（月）の勤務区分' });
 
     const wednesdayGroup = screen.getByRole('group', { name: '5月15日（水）の勤務区分' });
-    await user.click(within(wednesdayGroup).getByRole('button', { name: '在宅' }));
+    await user.click(within(wednesdayGroup).getByRole('button', { name: 'テレワーク' }));
 
     // 保存失敗の日本語メッセージが alert として表示される。
     const alert = await screen.findByRole('alert');

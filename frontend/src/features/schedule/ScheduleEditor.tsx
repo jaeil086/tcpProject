@@ -33,7 +33,7 @@ interface DaySaveState {
  */
 const WORK_LOCATION_OPTIONS: { value: WorkLocation; label: string }[] = [
   { value: WorkLocation.Office, label: '出社' },
-  { value: WorkLocation.Remote, label: '在宅' },
+  { value: WorkLocation.Remote, label: 'テレワーク' },
 ];
 
 /**

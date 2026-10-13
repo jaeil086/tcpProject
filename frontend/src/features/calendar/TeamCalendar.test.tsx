@@ -4,7 +4,7 @@
 // 検証観点:
 // - 空状態メッセージ: 対象週に登録済みの勤務予定が 1 件も無い場合、未登録である旨の
 //   メッセージを表示する（要件 3.5）。
-// - 未登録セル表示: office/remote/null が混在するとき、各セルに「出社」「在宅」「未登録」を
+// - 未登録セル表示: office/remote/null が混在するとき、各セルに「出社」「テレワーク」「未登録」を
 //   適切に表示し、Occupancy_Count 行に officeCount を表示する（要件 3.2、3.6）。
 // - 取得失敗で既存表示不変: チーム変更で再取得が ApiError で失敗した場合、エラーバナーを
 //   表示しつつ直前まで表示していたカレンダーは保持する（要件 3.7）。
@@ -118,7 +118,7 @@ describe('TeamCalendar', () => {
     expect(await screen.findByText('対象週の勤務予定は未登録です。')).toBeInTheDocument();
   });
 
-  it('office/remote/null 混在時、各セルに「出社」「在宅」「未登録」を表示し、出社人数行に officeCount を表示する', async () => {
+  it('office/remote/null 混在時、各セルに「出社」「テレワーク」「未登録」を表示し、出社人数行に officeCount を表示する', async () => {
     const auth = await getAuthMock();
     auth.mockReturnValue({ user: USER });
     const mocks = await getApiMocks();
@@ -130,9 +130,9 @@ describe('TeamCalendar', () => {
     // メンバー行が描画されるのを待つ。
     await screen.findByText('田中');
 
-    // 月曜=出社、火曜=在宅、残り 3 日（水・木・金）は未登録。
+    // 月曜=出社、火曜=テレワーク、残り 3 日（水・木・金）は未登録。
     expect(screen.getByText('出社')).toBeInTheDocument();
-    expect(screen.getByText('在宅')).toBeInTheDocument();
+    expect(screen.getByText('テレワーク')).toBeInTheDocument();
     expect(screen.getAllByText('未登録')).toHaveLength(3);
 
     // Occupancy_Count 行（出社人数）に月曜の officeCount=1 が表示される。

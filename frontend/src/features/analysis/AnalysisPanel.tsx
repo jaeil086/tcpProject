@@ -215,7 +215,7 @@ export function AnalysisPanel() {
                       scope="row"
                       className="px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
                     >
-                      在宅
+                      テレワーク
                     </th>
                     {result.summary.map((day) => (
                       <td key={day.date} className="px-3 py-2 text-center font-semibold text-green-700">

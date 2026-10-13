@@ -49,7 +49,7 @@ function renderWorkLocation(workLocation: WorkLocationValue | null): {
     case WorkLocation.Office:
       return { label: '出社', className: 'bg-blue-100 text-blue-800' };
     case WorkLocation.Remote:
-      return { label: '在宅', className: 'bg-green-100 text-green-800' };
+      return { label: 'テレワーク', className: 'bg-green-100 text-green-800' };
     default:
       // 未登録（null）は淡色で区別表示する（要件 3.6）。
       return { label: '未登録', className: 'bg-gray-50 text-gray-400' };
