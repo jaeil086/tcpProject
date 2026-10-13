@@ -39,41 +39,41 @@ function App() {
         {/* 勤務予定登録・更新: 全ロール */}
         <Route path="/schedule" element={<ScheduleEditor />} />
 
-        {/* 管理者ダッシュボード: 管理者専用（要件 4.2） */}
+        {/* 管理者ダッシュボード: 最上位管理者・チーム管理者（要件 4.2） */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute requiredRole={UserRole.Administrator}>
+            <ProtectedRoute allowedRoles={[UserRole.SuperAdmin, UserRole.TeamAdmin]}>
               <AdminDashboard />
             </ProtectedRoute>
           }
         />
 
-        {/* AI 分析パネル: 管理者専用（要件 4.2） */}
+        {/* AI 分析パネル: 最上位管理者・チーム管理者（要件 4.2） */}
         <Route
           path="/analysis"
           element={
-            <ProtectedRoute requiredRole={UserRole.Administrator}>
+            <ProtectedRoute allowedRoles={[UserRole.SuperAdmin, UserRole.TeamAdmin]}>
               <AnalysisPanel />
             </ProtectedRoute>
           }
         />
 
-        {/* ユーザー管理: 管理者専用 */}
+        {/* ユーザー管理: 最上位管理者・チーム管理者（チーム割り当て用） */}
         <Route
           path="/admin/users"
           element={
-            <ProtectedRoute requiredRole={UserRole.Administrator}>
+            <ProtectedRoute allowedRoles={[UserRole.SuperAdmin, UserRole.TeamAdmin]}>
               <UserManagement />
             </ProtectedRoute>
           }
         />
 
-        {/* チーム管理: 管理者専用 */}
+        {/* チーム管理: 最上位管理者専用（チームの作成・削除） */}
         <Route
           path="/admin/teams"
           element={
-            <ProtectedRoute requiredRole={UserRole.Administrator}>
+            <ProtectedRoute allowedRoles={[UserRole.SuperAdmin]}>
               <TeamManagement />
             </ProtectedRoute>
           }

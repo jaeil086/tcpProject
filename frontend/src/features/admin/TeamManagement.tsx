@@ -62,6 +62,11 @@ export function TeamManagement() {
   // 作成成功メッセージ。
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // 削除処理中のチーム ID（対象行の削除ボタンを無効化し、二重実行を防ぐ）。
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // 削除失敗時のエラーメッセージ。
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // マウント時にチーム一覧を取得する。
   useEffect(() => {
     let cancelled = false;
@@ -118,6 +123,36 @@ export function TeamManagement() {
       setFormError(toCreateErrorMessage(error));
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  /**
+   * チームを削除する。削除前に確認ダイアログを表示し、承諾時のみ DELETE /teams/:id を呼ぶ。
+   * 成功時は一覧から該当チームを除去する。失敗時は削除エラーを表示する。
+   */
+  async function handleDelete(team: Team): Promise<void> {
+    const confirmed = window.confirm(
+      `チーム「${team.name}」を削除します。所属メンバーは未所属に戻ります。よろしいですか？`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteError(null);
+    setSuccessMessage(null);
+    setDeletingId(team.id);
+    try {
+      await teamsApi.deleteTeam(team.id);
+      setTeams((prev) => prev.filter((t) => t.id !== team.id));
+      setSuccessMessage(`チーム「${team.name}」を削除しました。`);
+    } catch (error) {
+      setDeleteError(
+        error instanceof ApiError && error.message
+          ? error.message
+          : 'チームの削除に失敗しました。時間をおいて再度お試しください。',
+      );
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -183,7 +218,17 @@ export function TeamManagement() {
       ) : teams.length === 0 ? (
         <p className="text-sm text-gray-500">チームが存在しません。</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+        <div className="space-y-2">
+          {/* 削除エラー */}
+          {deleteError && (
+            <div
+              role="alert"
+              className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {deleteError}
+            </div>
+          )}
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
@@ -193,17 +238,35 @@ export function TeamManagement() {
                 <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
                   リーダー
                 </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium text-gray-700">
+                  操作
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {teams.map((team) => (
-                <tr key={team.id}>
-                  <td className="px-4 py-3 text-gray-900">{team.name}</td>
-                  <td className="px-4 py-3 text-gray-700">{team.leaderName ?? '未設定'}</td>
-                </tr>
-              ))}
+              {teams.map((team) => {
+                const isDeleting = deletingId === team.id;
+                return (
+                  <tr key={team.id}>
+                    <td className="px-4 py-3 text-gray-900">{team.name}</td>
+                    <td className="px-4 py-3 text-gray-700">{team.leaderName ?? '未設定'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        aria-label={`チーム「${team.name}」を削除`}
+                        disabled={isDeleting}
+                        onClick={() => handleDelete(team)}
+                        className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isDeleting ? '削除中...' : '削除'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </section>

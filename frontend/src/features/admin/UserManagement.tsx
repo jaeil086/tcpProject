@@ -8,22 +8,33 @@
 //   アクセシビリティのため <th scope="col"> を付与し、操作系コントロールには aria-label を付ける。
 // - チーム割り当て: <select>（「未所属」= null を含む）を変更すると PUT /users/:id/team を呼び、
 //   成功時は返却された AdminUserView で該当行を差し替える。失敗時は行単位のエラーを表示する。
-// - ロール変更: <select>（従業員 / 管理者）を変更すると PUT /users/:id/role を呼ぶ。
+//   チーム割り当ては最上位管理者・チーム管理者の双方が実行できる。
+// - ロール変更: <select>（従業員 / チーム管理者 / 最上位管理者）を変更すると PUT /users/:id/role を呼ぶ。
 //   成功時は該当行を差し替え、失敗時（例: 自己降格の 400）はサーバーの日本語メッセージを表示する。
+//   ロール変更は最上位管理者（super_admin）のみ可能なため、それ以外のユーザーには読み取り専用の
+//   ラベル表示に切り替える（バックエンドでも @Roles(SuperAdmin) で保護している）。
 // - 更新中の行は該当コントロールを無効化し、二重送信を防ぐ。
 
 import { useEffect, useState } from 'react';
 import { ApiError, calendarApi, usersApi } from '../../api';
+import { useAuth } from '../../auth';
 import { UserRole, type AdminUserView, type Team } from '../../types';
 
 /** 「未所属」を表す <select> の値（null を DOM 上で扱うための番兵）。 */
 const UNASSIGNED_TEAM_VALUE = '__unassigned__';
 
 /**
- * ロールを日本語ラベルへ変換する。
+ * ロールを日本語ラベルへ変換する（3 階層対応）。
  */
 function roleLabel(role: UserRole): string {
-  return role === UserRole.Administrator ? '管理者' : '従業員';
+  switch (role) {
+    case UserRole.SuperAdmin:
+      return '最上位管理者';
+    case UserRole.TeamAdmin:
+      return 'チーム管理者';
+    default:
+      return '従業員';
+  }
 }
 
 /**
@@ -41,6 +52,10 @@ function toActionErrorMessage(error: unknown): string {
  * 管理者向けユーザー管理画面コンポーネント。
  */
 export function UserManagement() {
+  // ログイン中ユーザー。ロール変更可否（最上位管理者のみ）の判定に用いる。
+  const { user: currentUser } = useAuth();
+  const canChangeRole = currentUser?.role === UserRole.SuperAdmin;
+
   // ユーザー一覧。
   const [users, setUsers] = useState<AdminUserView[]>([]);
   // チーム一覧（割り当てプルダウン用）。
@@ -204,20 +219,25 @@ export function UserManagement() {
                     <td className="px-4 py-3 text-gray-900">{user.name}</td>
                     <td className="px-4 py-3 text-gray-700">{user.email}</td>
 
-                    {/* ロール変更 */}
+                    {/* ロール変更（最上位管理者のみ編集可。それ以外は読み取り専用ラベル） */}
                     <td className="px-4 py-3">
-                      <select
-                        aria-label={`${user.name} のロール`}
-                        value={user.role}
-                        disabled={isUpdating}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                        className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                      >
-                        <option value={UserRole.Employee}>{roleLabel(UserRole.Employee)}</option>
-                        <option value={UserRole.Administrator}>
-                          {roleLabel(UserRole.Administrator)}
-                        </option>
-                      </select>
+                      {canChangeRole ? (
+                        <select
+                          aria-label={`${user.name} のロール`}
+                          value={user.role}
+                          disabled={isUpdating}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
+                          className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                        >
+                          <option value={UserRole.Employee}>{roleLabel(UserRole.Employee)}</option>
+                          <option value={UserRole.TeamAdmin}>{roleLabel(UserRole.TeamAdmin)}</option>
+                          <option value={UserRole.SuperAdmin}>
+                            {roleLabel(UserRole.SuperAdmin)}
+                          </option>
+                        </select>
+                      ) : (
+                        <span className="text-gray-700">{roleLabel(user.role)}</span>
+                      )}
                     </td>
 
                     {/* チーム割り当て */}

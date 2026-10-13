@@ -18,12 +18,17 @@ export const WorkLocation = {
 export type WorkLocation = (typeof WorkLocation)[keyof typeof WorkLocation];
 
 /**
- * ユーザーのロール。employee（従業員）／ administrator（管理者）（要件 4.2）。
+ * ユーザーのロール（3 階層の権限体系）。
  * バックエンドの UserRole enum と値を一致させる。
+ *
+ * - SuperAdmin（最上位管理者）: すべての操作が可能（チーム作成／削除、全ユーザー管理）。
+ * - TeamAdmin（チーム管理者）: 自チームの閲覧・メンバーのチーム割り当てが可能。
+ * - Employee（従業員）: 本人の勤務予定の登録・閲覧のみ。
  */
 export const UserRole = {
   Employee: 'employee',
-  Administrator: 'administrator',
+  TeamAdmin: 'team_admin',
+  SuperAdmin: 'super_admin',
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 

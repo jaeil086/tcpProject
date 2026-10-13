@@ -28,3 +28,14 @@ export function getTeams(): Promise<Team[]> {
 export function createTeam(name: string): Promise<Team> {
   return apiClient.post<Team>('/teams', { name });
 }
+
+/**
+ * DELETE /teams/:id
+ * チームを削除する（最上位管理者専用）。所属メンバーはサーバー側で未所属へ退避される。
+ * 成功時は 204 No Content（本関数は void を返す）。
+ *
+ * @param id 削除するチームの ID
+ */
+export function deleteTeam(id: string): Promise<void> {
+  return apiClient.delete<void>(`/teams/${id}`);
+}

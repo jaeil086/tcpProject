@@ -5,8 +5,9 @@
 // - App.tsx のレイアウトルートとして使用し、<Outlet/> に各機能画面を描画する。
 //   これにより保護ルート群（/、/schedule、/dashboard、/analysis）で共通のナビを提供する。
 // - ナビゲーションリンクは react-router の <NavLink> を用い、現在位置をハイライトする。
-// - 管理者専用リンク（ダッシュボード・AI 分析）は useAuth().user?.role が
-//   administrator の場合のみ表示する（要件 4.2）。
+// - 管理者向けリンク（ダッシュボード・AI 分析・ユーザー管理）は最上位管理者（super_admin）
+//   またはチーム管理者（team_admin）の場合のみ表示する（要件 4.2）。
+// - チーム管理リンク（チームの作成・削除）は最上位管理者（super_admin）のみ表示する。
 // - ログアウトボタンは useAuth().logout() を呼び、完了後 /login へ遷移する（要件 1.7）。
 // - ログイン画面（/login）は本レイアウトの外側に配置するため、ナビは表示されない。
 
@@ -30,7 +31,11 @@ function navLinkClass({ isActive }: { isActive: boolean }): string {
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const isAdministrator = user?.role === UserRole.Administrator;
+  // 最上位管理者（super_admin）か。チーム管理などの最上位専用操作の表示判定に用いる。
+  const isSuperAdmin = user?.role === UserRole.SuperAdmin;
+  // 管理者（最上位管理者またはチーム管理者）か。管理者向けメニュー全体の表示判定に用いる。
+  const isAdministrator =
+    isSuperAdmin || user?.role === UserRole.TeamAdmin;
 
   // ログアウト処理: 認証状態を破棄してからログイン画面へ遷移する（要件 1.7）。
   async function handleLogout(): Promise<void> {
@@ -67,9 +72,12 @@ export function AppLayout() {
                   <NavLink to="/admin/users" className={navLinkClass}>
                     ユーザー管理
                   </NavLink>
-                  <NavLink to="/admin/teams" className={navLinkClass}>
-                    チーム管理
-                  </NavLink>
+                  {/* チーム管理は最上位管理者専用 */}
+                  {isSuperAdmin && (
+                    <NavLink to="/admin/teams" className={navLinkClass}>
+                      チーム管理
+                    </NavLink>
+                  )}
                 </>
               )}
             </nav>

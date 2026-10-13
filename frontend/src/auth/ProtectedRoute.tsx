@@ -17,14 +17,17 @@ import type { UserRole } from '../types';
 interface ProtectedRouteProps {
   /** 保護対象の子要素（画面コンポーネント）。 */
   children: ReactNode;
-  /** 必要なロール。指定時は当該ロールのユーザーのみ許可する（要件 4.2）。 */
-  requiredRole?: UserRole;
+  /**
+   * 必要なロール。指定時は、ユーザーのロールが allowedRoles のいずれかに一致する場合のみ許可する（要件 4.2）。
+   * 単一ロールだけでなく「最上位管理者・チーム管理者のいずれか」のような階層表現にも対応する。
+   */
+  allowedRoles?: UserRole[];
 }
 
 /**
  * 認証・認可を満たす場合のみ children を描画する保護ルート。
  */
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
@@ -43,7 +46,8 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   // ロール要件がある場合の認可チェック（要件 4.2）。
-  if (requiredRole && user?.role !== requiredRole) {
+  // allowedRoles が指定されている場合、ユーザーのロールがそのいずれかに一致しなければ拒否する。
+  if (allowedRoles && allowedRoles.length > 0 && !(user && allowedRoles.includes(user.role))) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-4 text-center">
         <h1 className="text-xl font-bold text-gray-800">アクセス権限がありません</h1>
