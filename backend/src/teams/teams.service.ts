@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -96,6 +97,26 @@ export class TeamsService {
       leaderId: created.leaderId,
       leaderName: leader?.name ?? null,
     };
+  }
+
+  /**
+   * チームを削除する（DELETE /teams/:id、最上位管理者のみ）。
+   *
+   * - 指定 id のチームが存在しない場合は 404（NotFoundException）とする。
+   * - 削除前に、当該チームに所属するユーザーを未所属（teamId = null）へ退避する。
+   *   これにより user.team_id の外部キー制約違反を避け、メンバーを失わずにチームのみ削除する。
+   *
+   * @param teamId 削除対象チームの id（Team.id）
+   */
+  async deleteTeam(teamId: string): Promise<void> {
+    const team = await this.teamRepository.findOne({ where: { id: teamId } });
+    if (!team) {
+      throw new NotFoundException('指定されたチームが見つかりません。');
+    }
+
+    // 所属メンバーを未所属へ退避してからチームを削除する。
+    await this.userRepository.update({ teamId }, { teamId: null });
+    await this.teamRepository.remove(team);
   }
 
   /**

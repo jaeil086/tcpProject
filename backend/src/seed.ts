@@ -229,10 +229,10 @@ async function run(): Promise<void> {
     );
     const admin = await upsertUser(
       {
-        label: '管理者',
+        label: '最上位管理者',
         email: adminEmail,
         name: envOrDefault(process.env.SEED_ADMIN_NAME, '管理者ユーザー'),
-        role: UserRole.Administrator,
+        role: UserRole.SuperAdmin,
         passwordHash: adminPassword.passwordHash,
         teamName: teamA.name,
       },

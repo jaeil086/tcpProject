@@ -12,7 +12,7 @@ export const ROLES_KEY = 'roles';
  * 指定したロールのいずれかを持つユーザーのみアクセスを許可する（要件 4.2）。
  *
  * 使用例:
- *   @Roles(UserRole.Administrator)
+ *   @Roles(UserRole.SuperAdmin, UserRole.TeamAdmin)
  *   @Get('/dashboard/occupancy')
  *   getOccupancy() { ... }
  *

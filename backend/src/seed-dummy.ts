@@ -174,11 +174,11 @@ async function adjustThreshold(employeeCount: number): Promise<void> {
   upper = Math.min(100, Math.max(1, upper));
   lower = Math.min(upper - 1, Math.max(0, lower));
 
-  // updatedBy 用のユーザー id を確保する（管理者優先、なければ任意の 1 名）。
+  // updatedBy 用のユーザー id を確保する（最上位管理者 → チーム管理者 → 任意の 1 名の順で探す）。
   const userRepo = AppDataSource.getRepository(User);
-  const admin = await userRepo.findOne({
-    where: { role: UserRole.Administrator },
-  });
+  const admin =
+    (await userRepo.findOne({ where: { role: UserRole.SuperAdmin } })) ??
+    (await userRepo.findOne({ where: { role: UserRole.TeamAdmin } }));
   const anyUser = admin ?? (await userRepo.findOne({ where: {} }));
   if (!anyUser) {
     console.log('[しきい値] ユーザーが存在しないため設定をスキップしました。');

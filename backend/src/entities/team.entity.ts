@@ -36,6 +36,7 @@ export class Team {
   leader: User | null;
 
   /** このチームに所属するユーザー群（1 チーム : 多ユーザー） */
+  //! 복수의 유저들이 하나의 팀에 소속된다. 1:N 관계 
   @OneToMany(() => User, (user) => user.team)
   users: User[];
 }

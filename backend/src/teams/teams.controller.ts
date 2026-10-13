@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -25,8 +27,9 @@ import { TeamsService, TeamSummary } from './teams.service';
  *
  * 認可方針:
  * - クラスレベルでは JwtAuthGuard のみを適用し、認証必須とする。
- * - POST のみ RolesGuard + @Roles(Administrator) をメソッドレベルで付与して
- *   管理者に限定する。GET は @Roles 指定がないため全ロールで利用できる
+ * - チームの作成（POST）／削除（DELETE）は最上位管理者（SuperAdmin）のみに限定する。
+ *   RolesGuard + @Roles(SuperAdmin) をメソッドレベルで付与する。
+ * - GET は @Roles 指定がないため全ロールで利用できる
  *   （RolesGuard はロール指定のないルートを常に許可する）。
  */
 @Controller('teams')
@@ -45,19 +48,33 @@ export class TeamsController {
 
   /**
    * POST /teams
-   * チームを新規作成する（管理者のみ）。作成した管理者をリーダーとして記録する。
+   * チームを新規作成する（最上位管理者のみ）。作成した管理者をリーダーとして記録する。
    * 作成されたチーム（リーダー情報付き）を 201 で返す。
    */
   @Post()
   @HttpCode(201)
   @UseGuards(RolesGuard)
-  @Roles(UserRole.Administrator)
+  @Roles(UserRole.SuperAdmin)
   async createTeam(
     @Req() request: Request,
     @Body() dto: CreateTeamDto,
   ): Promise<TeamSummary> {
     const userId = this.getUserId(request);
     return this.teamsService.createTeam(dto.name, userId);
+  }
+
+  /**
+   * DELETE /teams/:id
+   * チームを削除する（最上位管理者のみ）。
+   * 所属メンバーがいる場合は未所属（team_id = NULL）へ退避してから削除する。
+   * 成功時は 204 No Content を返す。
+   */
+  @Delete(':id')
+  @HttpCode(204)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SuperAdmin)
+  async deleteTeam(@Param('id') id: string): Promise<void> {
+    await this.teamsService.deleteTeam(id);
   }
 
   /**

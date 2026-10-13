@@ -34,15 +34,15 @@ const DATE_STRING_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * - GET  /dashboard/threshold: 現在のしきい値設定（要件 4.3）
  * - PUT  /dashboard/threshold: しきい値設定の更新（要件 4.3、4.4）
  *
- * 認可（設計書 API 一覧「要認証（Administrator）」、要件 4.2）:
- * - JwtAuthGuard で認証必須とし、RolesGuard + @Roles(Administrator) により
- *   Administrator 以外のアクセスを 403 で拒否する。
+ * 認可（要件 4.2）:
+ * - JwtAuthGuard で認証必須とし、RolesGuard + @Roles(SuperAdmin, TeamAdmin) により
+ *   管理者（最上位管理者・チーム管理者）のみ許可する。従業員は 403 で拒否する。
  *
  * コントローラは薄く保ち、集計・検証・永続化はすべて DashboardService に委譲する。
  */
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.Administrator)
+@Roles(UserRole.SuperAdmin, UserRole.TeamAdmin)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

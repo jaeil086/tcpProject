@@ -30,7 +30,7 @@ function makeAdmin(cognitoSub: string): User {
     cognitoSub,
     email: 'admin@example.com',
     name: '管理者太郎',
-    role: UserRole.Administrator,
+    role: UserRole.SuperAdmin,
     teamId: null,
     team: null,
   } as User;
