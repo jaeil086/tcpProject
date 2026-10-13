@@ -8,5 +8,6 @@ export * as authApi from './auth';
 export * as usersApi from './users';
 export * as schedulesApi from './schedules';
 export * as calendarApi from './calendar';
+export * as teamsApi from './teams';
 export * as dashboardApi from './dashboard';
 export * as analysisApi from './analysis';

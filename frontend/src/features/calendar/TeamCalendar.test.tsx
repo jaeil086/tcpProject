@@ -63,8 +63,8 @@ const USER: UserProfile = {
 };
 
 const TEAMS: Team[] = [
-  { id: 'team-1', name: 'チームA' },
-  { id: 'team-2', name: 'チームB' },
+  { id: 'team-1', name: 'チームA', leaderId: null, leaderName: null },
+  { id: 'team-2', name: 'チームB', leaderId: null, leaderName: null },
 ];
 
 // office/remote/null が混在するカレンダー（Target_Week 平日 5 日・月〜金）。

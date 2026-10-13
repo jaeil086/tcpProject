@@ -115,10 +115,23 @@ export interface UserProfile {
 
 /**
  * GET /teams が返すチーム 1 件分（要件 3.3、3.4）。
+ * バックエンドの TeamSummary に一致し、リーダー情報を含む。
  */
 export interface Team {
   /** チーム ID（UUID） */
   id: string;
+  /** チーム名 */
+  name: string;
+  /** リーダーのユーザー ID（未設定の場合は null） */
+  leaderId: string | null;
+  /** リーダーの氏名（未設定または未解決の場合は null） */
+  leaderName: string | null;
+}
+
+/**
+ * POST /teams のリクエストボディ。管理者がチームを新規作成する際に用いる。
+ */
+export interface CreateTeamRequest {
   /** チーム名 */
   name: string;
 }

@@ -8,6 +8,7 @@ import { TeamCalendar } from './features/calendar/TeamCalendar';
 import { AdminDashboard } from './features/dashboard/AdminDashboard';
 import { AnalysisPanel } from './features/analysis/AnalysisPanel';
 import { UserManagement } from './features/admin/UserManagement';
+import { TeamManagement } from './features/admin/TeamManagement';
 import { UserRole } from './types';
 
 // ルーティング定義
@@ -64,6 +65,16 @@ function App() {
           element={
             <ProtectedRoute requiredRole={UserRole.Administrator}>
               <UserManagement />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* チーム管理: 管理者専用 */}
+        <Route
+          path="/admin/teams"
+          element={
+            <ProtectedRoute requiredRole={UserRole.Administrator}>
+              <TeamManagement />
             </ProtectedRoute>
           }
         />

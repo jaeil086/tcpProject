@@ -67,6 +67,9 @@ export function AppLayout() {
                   <NavLink to="/admin/users" className={navLinkClass}>
                     ユーザー管理
                   </NavLink>
+                  <NavLink to="/admin/teams" className={navLinkClass}>
+                    チーム管理
+                  </NavLink>
                 </>
               )}
             </nav>
