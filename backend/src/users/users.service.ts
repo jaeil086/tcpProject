@@ -5,9 +5,57 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomInt } from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
 import { UserRole } from '../entities/enums';
+
+/** bcrypt のソルトラウンド数（AuthService と一致させる）。 */
+const BCRYPT_SALT_ROUNDS = 10;
+
+/** 自動生成する一時パスワードの文字数。 */
+const TEMP_PASSWORD_LENGTH = 12;
+
+/**
+ * 一時パスワードに用いる文字集合。
+ * 判読しにくい文字（0/O/1/l/I など）は避け、英大文字・英小文字・数字・記号を含める。
+ * 生成時に各種別から最低 1 文字を含めることで、強度（混在）を担保する。
+ */
+const TEMP_PASSWORD_CHARSET = {
+  upper: 'ABCDEFGHJKLMNPQRSTUVWXYZ',
+  lower: 'abcdefghijkmnpqrstuvwxyz',
+  digit: '23456789',
+  symbol: '!@#$%&*?',
+};
+
+/**
+ * 強度を満たす一時パスワードを生成する。
+ * 英大文字・英小文字・数字・記号を各 1 文字以上含み、残りを全集合からランダムに補う。
+ * 偏りのない乱数（crypto.randomInt）を用い、最後に文字順をシャッフルする。
+ */
+function generateTemporaryPassword(): string {
+  const { upper, lower, digit, symbol } = TEMP_PASSWORD_CHARSET;
+  const all = upper + lower + digit + symbol;
+
+  const pick = (set: string): string => set[randomInt(set.length)];
+
+  // 各種別から最低 1 文字を確保する。
+  const chars: string[] = [pick(upper), pick(lower), pick(digit), pick(symbol)];
+
+  // 残りを全集合からランダムに補う。
+  while (chars.length < TEMP_PASSWORD_LENGTH) {
+    chars.push(pick(all));
+  }
+
+  // Fisher-Yates シャッフルで先頭に種別が偏らないようにする。
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join('');
+}
 
 /**
  * ユーザープロフィール（GET /auth/me などで返却する値オブジェクト）。
@@ -231,5 +279,37 @@ export class UsersService {
     user.role = role;
     const saved = await this.userRepository.save(user);
     return this.toAdminUserView(saved);
+  }
+
+  /**
+   * 指定ユーザーのパスワードを一時パスワードへ再設定する（PUT /users/:id/password、最上位管理者のみ）。
+   *
+   * - サーバー側で強度を満たす一時パスワードを自動生成し、bcrypt でハッシュ化して保存する。
+   * - 生成した平文の一時パスワードは本メソッドの戻り値としてのみ 1 回返す（DB には保存しない）。
+   *   呼び出し側（管理者）はこれを対象ユーザーへ安全な経路で伝達し、ユーザーは初回ログイン後に変更する。
+   * - ユーザーが存在しない場合は 404（NotFoundException）とする。
+   *
+   * @param userId 対象ユーザーの id
+   * @returns 対象ユーザーの管理者向けビューと、生成した一時パスワード（平文）
+   */
+  async resetPassword(
+    userId: string,
+  ): Promise<{ user: AdminUserView; temporaryPassword: string }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { team: true },
+    });
+    if (!user) {
+      throw new NotFoundException('指定されたユーザーが見つかりません。');
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    user.passwordHash = await bcrypt.hash(temporaryPassword, BCRYPT_SALT_ROUNDS);
+    const saved = await this.userRepository.save(user);
+
+    return {
+      user: this.toAdminUserView(saved),
+      temporaryPassword,
+    };
   }
 }

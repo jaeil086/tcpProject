@@ -177,8 +177,20 @@ export interface AssignTeamRequest {
  * PUT /users/:id/role のリクエストボディ。
  */
 export interface UpdateRoleRequest {
-  /** 変更後のロール（employee / administrator） */
+  /** 変更後のロール（employee / team_admin / super_admin） */
   role: UserRole;
+}
+
+/**
+ * PUT /users/:id/password のレスポンス（backend ResetPasswordResponseDto に一致）。
+ * 最上位管理者がユーザーのパスワードを一時パスワードへ再設定した結果を表す。
+ * temporaryPassword はこの応答でのみ返される平文であり、保存・再取得はできない。
+ */
+export interface ResetPasswordResponse {
+  /** 対象ユーザーの管理者向けビュー（パスワードハッシュは含まない）。 */
+  user: AdminUserView;
+  /** 生成された一時パスワード（平文。この応答でのみ取得可能）。 */
+  temporaryPassword: string;
 }
 
 // ---------------------------------------------------------------------------

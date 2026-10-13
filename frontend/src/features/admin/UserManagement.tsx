@@ -52,9 +52,12 @@ function toActionErrorMessage(error: unknown): string {
  * 管理者向けユーザー管理画面コンポーネント。
  */
 export function UserManagement() {
-  // ログイン中ユーザー。ロール変更可否（最上位管理者のみ）の判定に用いる。
+  // ログイン中ユーザー。ロール変更・パスワード再設定の可否（最上位管理者のみ）の判定に用いる。
   const { user: currentUser } = useAuth();
-  const canChangeRole = currentUser?.role === UserRole.SuperAdmin;
+  const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
+  // ロール変更もパスワード再設定も最上位管理者のみ可能。
+  const canChangeRole = isSuperAdmin;
+  const canResetPassword = isSuperAdmin;
 
   // ユーザー一覧。
   const [users, setUsers] = useState<AdminUserView[]>([]);
@@ -68,6 +71,9 @@ export function UserManagement() {
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   // 行単位の操作エラー（ユーザー ID → メッセージ）。
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  // パスワード再設定で生成された一時パスワード（ユーザー ID → 一時パスワード）。
+  // 管理者が対象ユーザーへ伝達できるよう、再設定直後に該当行へ表示する。
+  const [tempPasswords, setTempPasswords] = useState<Record<string, string>>({});
 
   // マウント時にユーザー一覧とチーム一覧を並列取得する。
   useEffect(() => {
@@ -166,6 +172,34 @@ export function UserManagement() {
     }
   }
 
+  /**
+   * 指定ユーザーのパスワードを一時パスワードへ再設定する。
+   * 確認ダイアログで承諾した場合のみ実行し、成功時は返却された一時パスワードを該当行に表示する。
+   * 一時パスワードはこの応答でのみ取得できるため、管理者が控えて対象ユーザーへ伝達する想定。
+   */
+  async function handleResetPassword(user: AdminUserView): Promise<void> {
+    const confirmed = window.confirm(
+      `${user.name}（${user.email}）のパスワードを再設定します。\n` +
+        '新しい一時パスワードが発行され、現在のパスワードは無効になります。よろしいですか？',
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdating(user.id, true);
+    setRowError(user.id, null);
+    try {
+      const result = await usersApi.resetPassword(user.id);
+      replaceUser(result.user);
+      // 生成された一時パスワードを該当行に表示する。
+      setTempPasswords((prev) => ({ ...prev, [user.id]: result.temporaryPassword }));
+    } catch (error) {
+      setRowError(user.id, toActionErrorMessage(error));
+    } finally {
+      setUpdating(user.id, false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="py-10 text-center text-sm text-gray-500" role="status">
@@ -208,12 +242,18 @@ export function UserManagement() {
                 <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
                   所属チーム
                 </th>
+                {canResetPassword && (
+                  <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                    操作
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {users.map((user) => {
                 const isUpdating = updatingIds.has(user.id);
                 const rowError = rowErrors[user.id];
+                const tempPassword = tempPasswords[user.id];
                 return (
                   <tr key={user.id} className="align-top">
                     <td className="px-4 py-3 text-gray-900">{user.name}</td>
@@ -264,6 +304,34 @@ export function UserManagement() {
                         </p>
                       )}
                     </td>
+
+                    {/* 操作（パスワード再設定。最上位管理者のみ） */}
+                    {canResetPassword && (
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          aria-label={`${user.name} のパスワードを再設定`}
+                          disabled={isUpdating}
+                          onClick={() => handleResetPassword(user)}
+                          className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isUpdating ? '処理中...' : 'パスワード再設定'}
+                        </button>
+
+                        {/* 発行された一時パスワード（この表示でのみ確認可能） */}
+                        {tempPassword && (
+                          <div className="mt-2 rounded border border-green-300 bg-green-50 px-2 py-1 text-xs text-green-800">
+                            <p className="font-medium">一時パスワードを発行しました</p>
+                            <code className="mt-1 block break-all font-mono text-sm text-gray-900">
+                              {tempPassword}
+                            </code>
+                            <p className="mt-1 text-[11px] text-green-700">
+                              この値は再表示できません。控えて本人へ伝え、初回ログイン後に変更してもらってください。
+                            </p>
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

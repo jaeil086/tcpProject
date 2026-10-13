@@ -17,14 +17,16 @@ import { UserRole } from '../entities/enums';
 import { AdminUserView, UsersService } from './users.service';
 import { AssignTeamDto } from './dto/assign-team.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { ResetPasswordResponseDto } from './dto/reset-password-response.dto';
 
 /**
  * 管理者専用のユーザー管理 REST エンドポイント（UsersModule がホストする）。
  *
  * グローバルプレフィックス（api）により実際のパスは `/api/users/*` となる。
- * - GET /users            : 全ユーザーの一覧（AdminUserView の配列）
- * - PUT /users/:id/team   : 所属チームの割り当て／解除
- * - PUT /users/:id/role   : ロールの変更
+ * - GET /users             : 全ユーザーの一覧（AdminUserView の配列）
+ * - PUT /users/:id/team    : 所属チームの割り当て／解除
+ * - PUT /users/:id/role    : ロールの変更（最上位管理者のみ）
+ * - PUT /users/:id/password: パスワードの一時パスワードへの再設定（最上位管理者のみ）
  *
  * 認可（3 階層の権限体系）:
  * - クラスレベルで JwtAuthGuard + RolesGuard + @Roles(SuperAdmin, TeamAdmin) を適用し、
@@ -85,6 +87,21 @@ export class UsersController {
       );
     }
     return this.usersService.updateRole(id, dto.role);
+  }
+
+  /**
+   * PUT /users/:id/password
+   * 指定ユーザーのパスワードを一時パスワードへ再設定する（最上位管理者のみ）。
+   *
+   * サーバーが強度を満たす一時パスワードを自動生成し、ハッシュ化して保存する。
+   * 生成した平文の一時パスワードはこの応答でのみ 1 回返す（管理者が対象ユーザーへ伝達する用途）。
+   */
+  @Put(':id/password')
+  @Roles(UserRole.SuperAdmin)
+  async resetPassword(
+    @Param('id') id: string,
+  ): Promise<ResetPasswordResponseDto> {
+    return this.usersService.resetPassword(id);
   }
 
   /**

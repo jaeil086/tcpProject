@@ -2,12 +2,13 @@
 // 管理者向けユーザー管理（Admin Users API）の API 呼び出し。
 //
 // 設計方針:
-// - 管理者専用エンドポイント（GET /users、PUT /users/:id/team、PUT /users/:id/role）を
-//   薄くラップする。呼び出し側（管理画面）はロール変更・チーム割り当てのみを扱う。
+// - 管理者専用エンドポイント（GET /users、PUT /users/:id/team、PUT /users/:id/role、
+//   PUT /users/:id/password）を薄くラップする。
 // - 更新系は変更後の AdminUserView を返し、UI 側で該当行を差し替えられるようにする。
+//   パスワード再設定は一時パスワードを含むレスポンスを返す。
 
 import { apiClient } from './client';
-import type { AdminUserView, UserRole } from '../types';
+import type { AdminUserView, ResetPasswordResponse, UserRole } from '../types';
 
 /**
  * GET /users
@@ -33,8 +34,20 @@ export function assignTeam(userId: string, teamId: string | null): Promise<Admin
  * 指定ユーザーのロールを更新する。
  *
  * @param userId 対象ユーザー ID
- * @param role   変更後のロール（employee / administrator）
+ * @param role   変更後のロール（employee / team_admin / super_admin）
  */
 export function updateRole(userId: string, role: UserRole): Promise<AdminUserView> {
   return apiClient.put<AdminUserView>(`/users/${userId}/role`, { role });
+}
+
+/**
+ * PUT /users/:id/password
+ * 指定ユーザーのパスワードを一時パスワードへ再設定する（最上位管理者専用）。
+ * サーバーが生成した一時パスワード（平文）を含むレスポンスを返す。この応答でのみ取得可能。
+ *
+ * @param userId 対象ユーザー ID
+ * @returns 対象ユーザーの最新ビューと生成された一時パスワード
+ */
+export function resetPassword(userId: string): Promise<ResetPasswordResponse> {
+  return apiClient.put<ResetPasswordResponse>(`/users/${userId}/password`);
 }
