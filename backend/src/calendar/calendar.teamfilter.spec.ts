@@ -7,6 +7,7 @@ import { InitialSchema1717000000000 } from '../migrations/1717000000000-InitialS
 import { Schedule } from '../entities/schedule.entity';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
+import { ThresholdSetting } from '../entities/threshold-setting.entity';
 import { UserRole } from '../entities/enums';
 import { UsersService } from '../users/users.service';
 import { TeamsService } from '../teams/teams.service';
@@ -112,6 +113,7 @@ describe('カレンダー集約のチームフィルタ property テスト（要
     const usersService = new UsersService(
       dataSource.getRepository(User),
       dataSource.getRepository(Team),
+      dataSource.getRepository(ThresholdSetting),
     );
     const teamsService = new TeamsService(
       dataSource.getRepository(Team),

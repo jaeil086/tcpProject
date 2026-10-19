@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommonModule } from '../common/common.module';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
+import { ThresholdSetting } from '../entities/threshold-setting.entity';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
@@ -29,7 +30,10 @@ import { UsersService } from './users.service';
  */
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Team]), CommonModule],
+  imports: [
+    TypeOrmModule.forFeature([User, Team, ThresholdSetting]),
+    CommonModule,
+  ],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [UsersService],

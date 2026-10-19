@@ -21,7 +21,9 @@
     "migration:revert:prod": "npm run typeorm:prod migration:revert",
     "seed:prod": "node dist/seed.js",
     "seed:dummy": "ts-node src/seed-dummy.ts",
-    "seed:dummy:prod": "node dist/seed-dummy.js"
+    "seed:dummy:prod": "node dist/seed-dummy.js",
+    "seed:clean": "ts-node src/seed-clean.ts",
+    "seed:clean:prod": "node dist/seed-clean.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",

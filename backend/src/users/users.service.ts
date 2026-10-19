@@ -9,6 +9,7 @@ import { randomInt } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
+import { ThresholdSetting } from '../entities/threshold-setting.entity';
 import { UserRole } from '../entities/enums';
 
 /** bcrypt のソルトラウンド数（AuthService と一致させる）。 */
@@ -126,6 +127,8 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Team)
     private readonly teamRepository: Repository<Team>,
+    @InjectRepository(ThresholdSetting)
+    private readonly thresholdRepository: Repository<ThresholdSetting>,
   ) {}
 
   /**
@@ -311,5 +314,51 @@ export class UsersService {
       user: this.toAdminUserView(saved),
       temporaryPassword,
     };
+  }
+
+  /**
+   * 指定ユーザーを削除する（DELETE /users/:id、最上位管理者のみ）。
+   *
+   * 安全策:
+   * - 自分自身は削除できない（操作中の管理者が自らを消す事故を防ぐ）。これはコントローラ側で
+   *   現在のユーザー id と照合して検証する。
+   * - 最後の最上位管理者（super_admin）は削除できない。削除すると管理機能へ誰もアクセス
+   *   できなくなるため、対象が super_admin かつ他に super_admin が存在しない場合は 400 とする。
+   *
+   * ユーザーに紐づく勤務予定（Schedule）は、エンティティの onDelete: CASCADE により
+   * DB 側で自動削除される。
+   *
+   * @param userId 削除対象ユーザーの id
+   * @param actingAdminId 操作を実行している最上位管理者の id（しきい値の updated_by 付け替えに用いる）
+   */
+  async deleteUser(userId: string, actingAdminId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('指定されたユーザーが見つかりません。');
+    }
+
+    // 最後の最上位管理者を失わないよう、対象が super_admin のときは他の super_admin の存在を確認する。
+    if (user.role === UserRole.SuperAdmin) {
+      const superAdminCount = await this.userRepository.count({
+        where: { role: UserRole.SuperAdmin },
+      });
+      if (superAdminCount <= 1) {
+        throw new BadRequestException(
+          '最後の最上位管理者は削除できません。先に別のユーザーを最上位管理者に設定してください。',
+        );
+      }
+    }
+
+    // しきい値設定の updated_by は ON DELETE NO ACTION のため、削除対象ユーザーが
+    // updated_by に参照されていると外部キー違反で削除に失敗する。該当する場合は
+    // 操作中の管理者へ付け替えてから削除する（整合性を保ちつつ削除を可能にする）。
+    if (actingAdminId && actingAdminId !== userId) {
+      await this.thresholdRepository.update(
+        { updatedBy: userId },
+        { updatedBy: actingAdminId },
+      );
+    }
+
+    await this.userRepository.remove(user);
   }
 }

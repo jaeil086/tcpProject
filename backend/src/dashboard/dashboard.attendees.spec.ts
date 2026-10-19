@@ -110,6 +110,7 @@ describe('出社者一覧の property テスト（要件 4.6）', () => {
     const usersService = new UsersService(
       dataSource.getRepository(User),
       dataSource.getRepository(Team),
+      dataSource.getRepository(ThresholdSetting),
     );
     dashboardService = new DashboardService(
       dataSource.getRepository(Schedule),

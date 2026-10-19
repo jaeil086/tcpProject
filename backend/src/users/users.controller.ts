@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Put,
   Req,
@@ -102,6 +104,33 @@ export class UsersController {
     @Param('id') id: string,
   ): Promise<ResetPasswordResponseDto> {
     return this.usersService.resetPassword(id);
+  }
+
+  /**
+   * DELETE /users/:id
+   * 指定ユーザーを削除する（最上位管理者のみ）。
+   *
+   * 安全策:
+   * - 自分自身は削除できない（操作中の管理者が自らを消す事故を防ぐ）。
+   * - 最後の最上位管理者は削除できない（検証は UsersService.deleteUser が行う）。
+   *
+   * 成功時は 204 No Content を返す。紐づく勤務予定は DB の ON DELETE CASCADE により
+   * 自動削除される。
+   */
+  @Delete(':id')
+  @Roles(UserRole.SuperAdmin)
+  @HttpCode(204)
+  async deleteUser(
+    @Req() request: Request,
+    @Param('id') id: string,
+  ): Promise<void> {
+    const currentUserId = this.getUserId(request);
+    if (currentUserId === id) {
+      throw new BadRequestException(
+        '自分自身を削除することはできません。',
+      );
+    }
+    await this.usersService.deleteUser(id, currentUserId);
   }
 
   /**

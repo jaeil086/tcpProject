@@ -7,6 +7,7 @@ import { InitialSchema1717000000000 } from '../migrations/1717000000000-InitialS
 import { Schedule } from '../entities/schedule.entity';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
+import { ThresholdSetting } from '../entities/threshold-setting.entity';
 import { UserRole, WorkLocation } from '../entities/enums';
 import { resolveTargetWeek } from '../domain/target-week';
 import { UsersService } from '../users/users.service';
@@ -106,6 +107,7 @@ describe('勤務予定 upsert の単一性 property テスト（要件 2.4、2.7
     usersService = new UsersService(
       dataSource.getRepository(User),
       dataSource.getRepository(Team),
+      dataSource.getRepository(ThresholdSetting),
     );
     scheduleService = new ScheduleService(
       dataSource.getRepository(Schedule),
