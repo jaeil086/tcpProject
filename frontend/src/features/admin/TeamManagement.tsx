@@ -7,12 +7,17 @@
 //   インライン検証メッセージを表示して API を呼ばない。成功時は返却されたチームを一覧へ反映し、
 //   入力をクリアして成功メッセージを表示する。送信中はボタンを無効化して二重送信を防ぐ。
 // - 失敗時は ApiError を日本語メッセージへ変換する（409: 重複、400: サーバーメッセージ、その他: 汎用）。
-// - 一覧はテーブルで描画する（チーム名・リーダー）。アクセシビリティのため <th scope="col"> を付与し、
-//   リーダー未設定は「未設定」と表示する。Tailwind のスタイルは UserManagement.tsx と揃える。
+// - 一覧はテーブルで描画する（チーム名・リーダー・操作）。アクセシビリティのため <th scope="col"> を付与する。
+// - リーダー列はドロップダウンで設定・解除できる（最上位管理者のみ）。候補は「そのチームに所属し、かつ
+//   ロールが team_admin のユーザー」に限定する（マウント時に GET /users で取得して算出）。
+//   未設定は「未設定」を選べる。変更時に PUT /teams/:id/leader を呼び、成功時は該当チームを差し替える。
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { ApiError, teamsApi } from '../../api';
-import type { Team } from '../../types';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ApiError, teamsApi, usersApi } from '../../api';
+import { UserRole, type AdminUserView, type Team } from '../../types';
+
+/** 「未設定（リーダー解除）」を表す <select> の値（null を DOM 上で扱うための番兵）。 */
+const UNSET_LEADER_VALUE = '__unset__';
 
 /**
  * 初回読込失敗など、一般的な API 例外を日本語メッセージへ変換する。
@@ -62,22 +67,34 @@ export function TeamManagement() {
   // 作成成功メッセージ。
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // 全ユーザー一覧（リーダー候補の算出に用いる）。
+  const [users, setUsers] = useState<AdminUserView[]>([]);
+
   // 削除処理中のチーム ID（対象行の削除ボタンを無効化し、二重実行を防ぐ）。
   const [deletingId, setDeletingId] = useState<string | null>(null);
   // 削除失敗時のエラーメッセージ。
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // マウント時にチーム一覧を取得する。
+  // リーダー更新処理中のチーム ID（対象行のプルダウンを無効化し、二重実行を防ぐ）。
+  const [leaderUpdatingId, setLeaderUpdatingId] = useState<string | null>(null);
+  // リーダー更新失敗時のエラーメッセージ。
+  const [leaderError, setLeaderError] = useState<string | null>(null);
+
+  // マウント時にチーム一覧とユーザー一覧を並列取得する。
   useEffect(() => {
     let cancelled = false;
 
-    async function loadTeams() {
+    async function loadInitial() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const teamList = await teamsApi.getTeams();
+        const [teamList, userList] = await Promise.all([
+          teamsApi.getTeams(),
+          usersApi.listUsers(),
+        ]);
         if (!cancelled) {
           setTeams(teamList);
+          setUsers(userList);
         }
       } catch (error) {
         if (!cancelled) {
@@ -90,11 +107,24 @@ export function TeamManagement() {
       }
     }
 
-    void loadTeams();
+    void loadInitial();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // チーム ID ごとのリーダー候補（そのチームに所属し、かつ team_admin のユーザー）。
+  const leaderCandidatesByTeam = useMemo(() => {
+    const map = new Map<string, AdminUserView[]>();
+    for (const user of users) {
+      if (user.role === UserRole.TeamAdmin && user.teamId) {
+        const list = map.get(user.teamId) ?? [];
+        list.push(user);
+        map.set(user.teamId, list);
+      }
+    }
+    return map;
+  }, [users]);
 
   /**
    * 作成フォームの送信ハンドラ。
@@ -153,6 +183,29 @@ export function TeamManagement() {
       );
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  /**
+   * チームのリーダーを変更する。「未設定」選択時は null（解除）を送る。
+   * 成功時は返却されたチームで一覧の該当行を差し替える。失敗時はリーダーエラーを表示する。
+   */
+  async function handleLeaderChange(team: Team, rawValue: string): Promise<void> {
+    const leaderId = rawValue === UNSET_LEADER_VALUE ? null : rawValue;
+    setLeaderError(null);
+    setSuccessMessage(null);
+    setLeaderUpdatingId(team.id);
+    try {
+      const updated = await teamsApi.setLeader(team.id, leaderId);
+      setTeams((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    } catch (error) {
+      setLeaderError(
+        error instanceof ApiError && error.message
+          ? error.message
+          : 'リーダーの設定に失敗しました。時間をおいて再度お試しください。',
+      );
+    } finally {
+      setLeaderUpdatingId(null);
     }
   }
 
@@ -228,6 +281,15 @@ export function TeamManagement() {
               {deleteError}
             </div>
           )}
+          {/* リーダー設定エラー */}
+          {leaderError && (
+            <div
+              role="alert"
+              className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {leaderError}
+            </div>
+          )}
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
@@ -246,10 +308,40 @@ export function TeamManagement() {
             <tbody className="divide-y divide-gray-100">
               {teams.map((team) => {
                 const isDeleting = deletingId === team.id;
+                const isLeaderUpdating = leaderUpdatingId === team.id;
+                // そのチームに所属する team_admin（リーダー候補）。
+                const candidates = leaderCandidatesByTeam.get(team.id) ?? [];
                 return (
                   <tr key={team.id}>
                     <td className="px-4 py-3 text-gray-900">{team.name}</td>
-                    <td className="px-4 py-3 text-gray-700">{team.leaderName ?? '未設定'}</td>
+
+                    {/* リーダー設定（そのチーム所属の team_admin から選択。未設定で解除） */}
+                    <td className="px-4 py-3">
+                      {candidates.length === 0 ? (
+                        <span className="text-xs text-gray-500">
+                          {team.leaderName ?? '未設定'}
+                          <span className="ml-1 text-gray-400">
+                            （このチームにチーム管理者がいません）
+                          </span>
+                        </span>
+                      ) : (
+                        <select
+                          aria-label={`チーム「${team.name}」のリーダー`}
+                          value={team.leaderId ?? UNSET_LEADER_VALUE}
+                          disabled={isLeaderUpdating}
+                          onChange={(e) => handleLeaderChange(team, e.target.value)}
+                          className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                        >
+                          <option value={UNSET_LEADER_VALUE}>未設定</option>
+                          {candidates.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {candidate.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+
                     <td className="px-4 py-3 text-right">
                       <button
                         type="button"

@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -16,19 +17,22 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { UserRole } from '../entities/enums';
 import { CreateTeamDto } from './dto/create-team.dto';
+import { SetLeaderDto } from './dto/set-leader.dto';
 import { TeamsService, TeamSummary } from './teams.service';
 
 /**
  * チーム関連の REST エンドポイント。
  *
  * グローバルプレフィックス（api）により実際のパスは `/api/teams` となる。
- * - GET  /teams : チーム一覧（リーダー情報付き）。認証済みユーザー（全ロール）が利用可。
- * - POST /teams : チーム新規作成（管理者のみ。作成者をリーダーとして記録）。
+ * - GET  /teams            : チーム一覧（リーダー情報付き）。認証済みユーザー（全ロール）が利用可。
+ * - POST /teams            : チーム新規作成（最上位管理者のみ。作成者をリーダーとして記録）。
+ * - DELETE /teams/:id       : チーム削除（最上位管理者のみ）。
+ * - PUT /teams/:id/leader  : チームリーダーの設定・解除（最上位管理者のみ）。
  *
  * 認可方針:
  * - クラスレベルでは JwtAuthGuard のみを適用し、認証必須とする。
- * - チームの作成（POST）／削除（DELETE）は最上位管理者（SuperAdmin）のみに限定する。
- *   RolesGuard + @Roles(SuperAdmin) をメソッドレベルで付与する。
+ * - チームの作成（POST）／削除（DELETE）／リーダー設定（PUT /:id/leader）は
+ *   最上位管理者（SuperAdmin）のみに限定し、RolesGuard + @Roles(SuperAdmin) を付与する。
  * - GET は @Roles 指定がないため全ロールで利用できる
  *   （RolesGuard はロール指定のないルートを常に許可する）。
  */
@@ -75,6 +79,22 @@ export class TeamsController {
   @Roles(UserRole.SuperAdmin)
   async deleteTeam(@Param('id') id: string): Promise<void> {
     await this.teamsService.deleteTeam(id);
+  }
+
+  /**
+   * PUT /teams/:id/leader
+   * チームリーダーを設定・解除する（最上位管理者のみ）。
+   * leaderId に team_admin かつ当該チーム所属のユーザーを指定するとリーダーに設定し、
+   * null を指定すると解除する。更新後のチーム（リーダー情報付き）を返す。
+   */
+  @Put(':id/leader')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SuperAdmin)
+  async setLeader(
+    @Param('id') id: string,
+    @Body() dto: SetLeaderDto,
+  ): Promise<TeamSummary> {
+    return this.teamsService.setLeader(id, dto.leaderId ?? null);
   }
 
   /**

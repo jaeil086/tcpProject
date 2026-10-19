@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Team } from '../entities/team.entity';
 import { User } from '../entities/user.entity';
+import { UserRole } from '../entities/enums';
 
 /**
  * API（GET/POST /teams）がクライアントへ返すチームのビュー型。
@@ -117,6 +118,66 @@ export class TeamsService {
     // 所属メンバーを未所属へ退避してからチームを削除する。
     await this.userRepository.update({ teamId }, { teamId: null });
     await this.teamRepository.remove(team);
+  }
+
+  /**
+   * チームのリーダーを設定・解除する（PUT /teams/:id/leader、最上位管理者のみ）。
+   *
+   * 検証:
+   * - 指定チームが存在しない場合は 404（NotFoundException）。
+   * - leaderUserId が null の場合はリーダーを解除する（leaderId = null）。
+   * - leaderUserId 指定時は、そのユーザーが存在し、role が team_admin であり、かつ
+   *   当該チームに所属していること（teamId 一致）を検証する。満たさない場合は 400。
+   *
+   * @param teamId 対象チームの id
+   * @param leaderUserId リーダーに設定するユーザーの id（null で解除）
+   */
+  async setLeader(
+    teamId: string,
+    leaderUserId: string | null,
+  ): Promise<TeamSummary> {
+    const team = await this.teamRepository.findOne({ where: { id: teamId } });
+    if (!team) {
+      throw new NotFoundException('指定されたチームが見つかりません。');
+    }
+
+    if (leaderUserId === null) {
+      // リーダーを解除する。
+      team.leaderId = null;
+      const saved = await this.teamRepository.save(team);
+      return {
+        id: saved.id,
+        name: saved.name,
+        leaderId: null,
+        leaderName: null,
+      };
+    }
+
+    const candidate = await this.userRepository.findOne({
+      where: { id: leaderUserId },
+    });
+    if (!candidate) {
+      throw new BadRequestException('指定されたユーザーが存在しません。');
+    }
+    if (candidate.role !== UserRole.TeamAdmin) {
+      throw new BadRequestException(
+        'チームリーダーにはチーム管理者（team_admin）のみ指定できます。',
+      );
+    }
+    if (candidate.teamId !== teamId) {
+      throw new BadRequestException(
+        'チームリーダーには、そのチームに所属するメンバーのみ指定できます。',
+      );
+    }
+
+    team.leaderId = candidate.id;
+    const saved = await this.teamRepository.save(team);
+    return {
+      id: saved.id,
+      name: saved.name,
+      leaderId: candidate.id,
+      leaderName: candidate.name,
+    };
   }
 
   /**

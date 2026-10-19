@@ -39,3 +39,16 @@ export function createTeam(name: string): Promise<Team> {
 export function deleteTeam(id: string): Promise<void> {
   return apiClient.delete<void>(`/teams/${id}`);
 }
+
+/**
+ * PUT /teams/:id/leader
+ * チームリーダーを設定・解除する（最上位管理者専用）。
+ * leaderId に team_admin かつ当該チーム所属のユーザー ID を指定するとリーダーに設定し、
+ * null を指定すると解除する。更新後のチーム（リーダー情報付き）を返す。
+ *
+ * @param id 対象チーム ID
+ * @param leaderId リーダーに設定するユーザー ID（解除する場合は null）
+ */
+export function setLeader(id: string, leaderId: string | null): Promise<Team> {
+  return apiClient.put<Team>(`/teams/${id}/leader`, { leaderId });
+}
