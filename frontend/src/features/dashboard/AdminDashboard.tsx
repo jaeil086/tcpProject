@@ -19,10 +19,15 @@
 // - 管理者専用アクセス（要件 4.2）は ProtectedRoute（requiredRole=Administrator）が担うため、
 //   本コンポーネントでは追加の権限制御は行わない。
 
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { ApiError, dashboardApi } from '../../api';
 import { formatDateJa } from '../../lib/date';
 import type { Attendee, DashboardOccupancy, Threshold } from '../../types';
+
+// 勤務状況グラフ（Recharts 依存）は遅延ロードする。
+// Recharts はバンドルが大きいため、ダッシュボードを開いたときにのみ別チャンクとして
+// 読み込み、初期ロード（特に低速な回線・リモートブラウザ環境）を軽量に保つ。
+const OccupancyCharts = lazy(() => import('./OccupancyCharts'));
 
 /**
  * ダッシュボード取得失敗時のユーザー向け日本語メッセージへ変換する（要件 4.1）。
@@ -341,6 +346,22 @@ export function AdminDashboard() {
                 );
               })}
             </div>
+          </section>
+
+          {/* 勤務状況の可視化（棒グラフ・ドーナツ。表と同一データを Recharts で描画） */}
+          <section aria-labelledby="charts-heading">
+            <h2 id="charts-heading" className="mb-3 text-lg font-semibold text-gray-800">
+              勤務状況グラフ
+            </h2>
+            <Suspense
+              fallback={
+                <div className="rounded border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+                  グラフを読み込み中...
+                </div>
+              }
+            >
+              <OccupancyCharts occupancy={occupancy} />
+            </Suspense>
           </section>
 
           {/* 日別出社者一覧（要件 4.6、4.7） */}
