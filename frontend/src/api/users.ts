@@ -51,3 +51,14 @@ export function updateRole(userId: string, role: UserRole): Promise<AdminUserVie
 export function resetPassword(userId: string): Promise<ResetPasswordResponse> {
   return apiClient.put<ResetPasswordResponse>(`/users/${userId}/password`);
 }
+
+/**
+ * DELETE /users/:id
+ * 指定ユーザーを削除する（最上位管理者専用）。
+ * 成功時はボディを返さない（204 No Content）。
+ *
+ * @param userId 削除対象ユーザー ID
+ */
+export function deleteUser(userId: string): Promise<void> {
+  return apiClient.delete<void>(`/users/${userId}`);
+}

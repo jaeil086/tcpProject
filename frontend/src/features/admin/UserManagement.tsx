@@ -52,12 +52,15 @@ function toActionErrorMessage(error: unknown): string {
  * 管理者向けユーザー管理画面コンポーネント。
  */
 export function UserManagement() {
-  // ログイン中ユーザー。ロール変更・パスワード再設定の可否（最上位管理者のみ）の判定に用いる。
+  // ログイン中ユーザー。ロール変更・パスワード再設定・削除の可否（最上位管理者のみ）の判定に用いる。
   const { user: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.role === UserRole.SuperAdmin;
-  // ロール変更もパスワード再設定も最上位管理者のみ可能。
+  // ロール変更・パスワード再設定・ユーザー削除はいずれも最上位管理者のみ可能。
   const canChangeRole = isSuperAdmin;
   const canResetPassword = isSuperAdmin;
+  const canDeleteUser = isSuperAdmin;
+  // 操作列（パスワード再設定・削除）を表示するか。最上位管理者のときのみ。
+  const showActions = canResetPassword || canDeleteUser;
 
   // ユーザー一覧。
   const [users, setUsers] = useState<AdminUserView[]>([]);
@@ -200,6 +203,32 @@ export function UserManagement() {
     }
   }
 
+  /**
+   * 指定ユーザーを削除する（最上位管理者のみ）。
+   * 確認ダイアログで承諾した場合のみ実行し、成功時は一覧から該当行を取り除く。
+   * 自分自身・最後の最上位管理者はサーバー側で拒否され、その旨が行エラーに表示される。
+   */
+  async function handleDeleteUser(user: AdminUserView): Promise<void> {
+    const confirmed = window.confirm(
+      `${user.name}（${user.email}）を削除します。\n` +
+        'このユーザーと紐づく勤務予定も削除され、元に戻せません。よろしいですか？',
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setUpdating(user.id, true);
+    setRowError(user.id, null);
+    try {
+      await usersApi.deleteUser(user.id);
+      // 成功時は一覧から該当ユーザーを取り除く。
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (error) {
+      setRowError(user.id, toActionErrorMessage(error));
+      setUpdating(user.id, false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="py-10 text-center text-sm text-gray-500" role="status">
@@ -242,7 +271,7 @@ export function UserManagement() {
                 <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
                   所属チーム
                 </th>
-                {canResetPassword && (
+                {showActions && (
                   <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
                     操作
                   </th>
@@ -305,18 +334,35 @@ export function UserManagement() {
                       )}
                     </td>
 
-                    {/* 操作（パスワード再設定。最上位管理者のみ） */}
-                    {canResetPassword && (
+                    {/* 操作（パスワード再設定・削除。最上位管理者のみ） */}
+                    {showActions && (
                       <td className="px-4 py-3">
-                        <button
-                          type="button"
-                          aria-label={`${user.name} のパスワードを再設定`}
-                          disabled={isUpdating}
-                          onClick={() => handleResetPassword(user)}
-                          className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isUpdating ? '処理中...' : 'パスワード再設定'}
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {canResetPassword && (
+                            <button
+                              type="button"
+                              aria-label={`${user.name} のパスワードを再設定`}
+                              disabled={isUpdating}
+                              onClick={() => handleResetPassword(user)}
+                              className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isUpdating ? '処理中...' : 'パスワード再設定'}
+                            </button>
+                          )}
+
+                          {/* ユーザー削除（最上位管理者のみ）。自分自身は削除できないためボタンを出さない。 */}
+                          {canDeleteUser && currentUser?.id !== user.id && (
+                            <button
+                              type="button"
+                              aria-label={`${user.name} を削除`}
+                              disabled={isUpdating}
+                              onClick={() => handleDeleteUser(user)}
+                              className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {isUpdating ? '処理中...' : '削除'}
+                            </button>
+                          )}
+                        </div>
 
                         {/* 発行された一時パスワード（この表示でのみ確認可能） */}
                         {tempPassword && (
