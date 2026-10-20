@@ -86,7 +86,14 @@ export function TeamCalendar() {
   // カレンダー取得失敗メッセージ（失敗時のみ設定。要件 3.7）。
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // マウント時にチーム一覧と自チームのカレンダーを取得する（要件 3.3、3.4）。
+  // マウント時にチーム一覧を取得し、表示対象チームを決めてそのカレンダーを取得する（要件 3.3、3.4）。
+  //
+  // 重要: 「ドロップダウンで選択中のチーム」と「実際に取得したカレンダーの対象チーム」を必ず一致させる。
+  // 以前は teamId を省略して自チームのカレンダーを取得していたため、
+  // 自チームが無いユーザー（例: 未所属の最上位管理者）では、ドロップダウンの表示チームと
+  // 取得データがずれ、初回に空表示になる不具合があった。
+  // そこで、表示対象チーム（自チーム → 無ければチーム一覧の先頭）を先に決め、
+  // その teamId を明示してカレンダーを取得する。
   useEffect(() => {
     let cancelled = false;
 
@@ -94,16 +101,31 @@ export function TeamCalendar() {
       setIsLoading(true);
       setFetchError(null);
       try {
-        // チーム一覧とカレンダー（teamId 省略＝自チーム）を並列取得する。
-        const [teamList, initialCalendar] = await Promise.all([
-          calendarApi.getTeams(),
-          calendarApi.getCalendar(),
-        ]);
+        // まずチーム一覧を取得する。
+        const teamList = await calendarApi.getTeams();
+        if (cancelled) {
+          return;
+        }
+        setTeams(teamList);
+
+        // 表示対象チームを決定する:
+        // 1) 自分の所属チームがチーム一覧に含まれていればそれを優先
+        // 2) 無ければチーム一覧の先頭（要件 3.3 / 本対応の方針）
+        const ownTeam = teamList.find((team) => team.id === user?.teamId);
+        const defaultTeam = ownTeam ?? teamList[0] ?? null;
+
+        if (!defaultTeam) {
+          // チームが 1 つも存在しない場合は、空表示のまま終える。
+          setSelectedTeamId(null);
+          setCalendar(null);
+          return;
+        }
+
+        // 選択チームを確定し、その teamId を明示してカレンダーを取得する（表示とデータを一致させる）。
+        setSelectedTeamId(defaultTeam.id);
+        const initialCalendar = await calendarApi.getCalendar({ teamId: defaultTeam.id });
         if (!cancelled) {
-          setTeams(teamList);
           setCalendar(initialCalendar);
-          // 既定の選択はサーバーが解決した自チーム（応答の teamId）を反映する（要件 3.4）。
-          setSelectedTeamId(initialCalendar.teamId ?? user?.teamId ?? null);
         }
       } catch (error) {
         if (!cancelled) {
