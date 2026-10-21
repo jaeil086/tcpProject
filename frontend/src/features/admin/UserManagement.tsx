@@ -248,9 +248,51 @@ export function UserManagement() {
     );
   }
 
+  // チーム別の所属人数を集計する（未所属を含む）。
+  // teams の並び順で件数を算出し、最後に「未所属」を付加する。
+  const assignedCountByTeam = new Map<string, number>();
+  let unassignedCount = 0;
+  for (const u of users) {
+    if (u.teamId) {
+      assignedCountByTeam.set(u.teamId, (assignedCountByTeam.get(u.teamId) ?? 0) + 1);
+    } else {
+      unassignedCount += 1;
+    }
+  }
+  // 表示用のチーム別件数リスト（teams の順 + 末尾に未所属）。
+  const teamCounts: { key: string; label: string; count: number }[] = [
+    ...teams.map((team) => ({
+      key: team.id,
+      label: team.name,
+      count: assignedCountByTeam.get(team.id) ?? 0,
+    })),
+    { key: '__unassigned__', label: '未所属', count: unassignedCount },
+  ];
+
   return (
     <section>
-      <h1 className="mb-4 text-xl font-bold text-gray-900">ユーザー管理</h1>
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 className="text-xl font-bold text-gray-900">ユーザー管理</h1>
+        {/* 総ユーザー数 */}
+        <span className="text-sm text-gray-600">
+          総ユーザー数: <span className="font-semibold text-gray-900">{users.length}</span> 名
+        </span>
+      </div>
+
+      {/* チーム別の所属人数サマリー */}
+      {users.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {teamCounts.map((tc) => (
+            <span
+              key={tc.key}
+              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700"
+            >
+              {tc.label}
+              <span className="font-semibold text-gray-900">{tc.count}</span> 名
+            </span>
+          ))}
+        </div>
+      )}
 
       {users.length === 0 ? (
         <p className="text-sm text-gray-500">対象ユーザーが存在しません。</p>

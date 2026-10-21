@@ -67,7 +67,7 @@ export function TeamManagement() {
   // 作成成功メッセージ。
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // 全ユーザー一覧（リーダー候補の算出に用いる）。
+  //! 全ユーザー一覧（リーダー候補の算出に用いる）。
   const [users, setUsers] = useState<AdminUserView[]>([]);
 
   // 削除処理中のチーム ID（対象行の削除ボタンを無効化し、二重実行を防ぐ）。
@@ -75,7 +75,7 @@ export function TeamManagement() {
   // 削除失敗時のエラーメッセージ。
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // リーダー更新処理中のチーム ID（対象行のプルダウンを無効化し、二重実行を防ぐ）。
+  //! リーダー更新処理中のチーム ID（対象行のプルダウンを無効化し、二重実行を防ぐ）。
   const [leaderUpdatingId, setLeaderUpdatingId] = useState<string | null>(null);
   // リーダー更新失敗時のエラーメッセージ。
   const [leaderError, setLeaderError] = useState<string | null>(null);

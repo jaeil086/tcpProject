@@ -186,6 +186,13 @@ export function TeamCalendar() {
           <p className="mt-1 text-sm text-gray-500">
             チーム全体の翌週（月曜〜金曜、平日）の勤務予定を確認できます。
           </p>
+          {/* 選択中チームの総人数（メンバー数） */}
+          {calendar && (
+            <p className="mt-1 text-sm text-gray-600">
+              チーム人数:{' '}
+              <span className="font-semibold text-gray-900">{calendar.members.length}</span> 名
+            </p>
+          )}
         </div>
 
         {/* チーム選択プルダウン（要件 3.3、3.4） */}
