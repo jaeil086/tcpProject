@@ -23,7 +23,9 @@
     "seed:dummy": "ts-node src/seed-dummy.ts",
     "seed:dummy:prod": "node dist/seed-dummy.js",
     "seed:clean": "ts-node src/seed-clean.ts",
-    "seed:clean:prod": "node dist/seed-clean.js"
+    "seed:clean:prod": "node dist/seed-clean.js",
+    "seed:users": "ts-node src/seed-users.ts",
+    "seed:users:prod": "node dist/seed-users.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",

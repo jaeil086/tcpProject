@@ -3,7 +3,7 @@
 # 認証は自前管理方式（bcrypt + 自己発行 JWT）。Cognito は使用しない。
 
 services:
-  # フロントエンド（React + Vite + TypeScript + TailwindCSS）
+  #? フロントエンド（React + Vite + TypeScript + TailwindCSS）
   frontend:
     build:
       context: ./frontend
@@ -18,7 +18,7 @@ services:
       - backend
     restart: unless-stopped
 
-  # バックエンド（NestJS + TypeScript）
+  #? バックエンド（NestJS + TypeScript）
   # Dockerfile でビルドした成果物（dist）をそのまま実行する。
   backend:
     build:
@@ -51,7 +51,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # データベース（PostgreSQL）
+  #? データベース（PostgreSQL）
   postgres:
     image: postgres:16-alpine
     ports:
