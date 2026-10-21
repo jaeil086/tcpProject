@@ -191,63 +191,102 @@ interface TeamSectionData {
   key: string;
   title: string;
   members: AdminUserView[];
+  /** チーム管理者（リーダー）の氏名。未設定・未所属セクションでは null。 */
+  leaderName: string | null;
 }
 
 /**
  * チーム別のユーザーセクション。
- * 見出し（チーム名 + 人数）と、所属メンバーのテーブルを描画する。
+ * 見出し（チーム名 + 人数 + 管理者）をクリックするとメンバー一覧を開閉できる（アコーディオン）。
  */
 function TeamSection({
   section,
   showActions,
+  isOpen,
+  onToggle,
   renderRow,
 }: {
   section: TeamSectionData;
   showActions: boolean;
+  isOpen: boolean;
+  onToggle: (key: string) => void;
   renderRow: (user: AdminUserView) => React.ReactNode;
 }) {
-  return (
-    <section className="mb-6">
-      {/* セクション見出し: チーム名 + 所属人数 */}
-      <div className="mb-2 flex items-baseline gap-2">
-        <h2 className="text-base font-semibold text-gray-900">{section.title}</h2>
-        <span className="text-sm text-gray-500">
-          （<span className="font-semibold text-gray-700">{section.members.length}</span> 名）
-        </span>
-      </div>
+  const panelId = `team-section-panel-${section.key}`;
 
-      {section.members.length === 0 ? (
-        <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400">
-          所属メンバーはいません。
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  氏名
-                </th>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  メール
-                </th>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  ロール
-                </th>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  所属チーム
-                </th>
-                {showActions && (
-                  <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                    操作
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {section.members.map((user) => renderRow(user))}
-            </tbody>
-          </table>
+  return (
+    <section className="mb-4 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {/* セクション見出し（開閉トグル）: チーム名 + 人数 + 管理者 */}
+      <h2>
+        <button
+          type="button"
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          onClick={() => onToggle(section.key)}
+          className="flex w-full items-center gap-2 bg-gray-50 px-4 py-3 text-left hover:bg-gray-100"
+        >
+          {/* 開閉インジケーター（右向き▶／下向き▼） */}
+          <span
+            aria-hidden="true"
+            className={
+              'inline-block text-xs text-gray-500 transition-transform ' +
+              (isOpen ? 'rotate-90' : '')
+            }
+          >
+            ▶
+          </span>
+          <span className="text-base font-semibold text-gray-900">{section.title}</span>
+          <span className="text-sm text-gray-500">
+            （<span className="font-semibold text-gray-700">{section.members.length}</span> 名）
+          </span>
+          {/* チーム管理者（リーダー）表記 */}
+          {section.leaderName ? (
+            <span className="ml-1 text-xs text-gray-500">
+              管理者: <span className="font-medium text-gray-700">{section.leaderName}</span>
+            </span>
+          ) : (
+            section.key !== UNASSIGNED_TEAM_VALUE && (
+              <span className="ml-1 text-xs text-gray-400">管理者: 未設定</span>
+            )
+          )}
+        </button>
+      </h2>
+
+      {/* 開いているときのみメンバー一覧を描画する */}
+      {isOpen && (
+        <div id={panelId}>
+          {section.members.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-gray-400">所属メンバーはいません。</p>
+          ) : (
+            <div className="overflow-x-auto border-t border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-white">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                      氏名
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                      メール
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                      ロール
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                      所属チーム
+                    </th>
+                    {showActions && (
+                      <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                        操作
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {section.members.map((user) => renderRow(user))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -436,8 +475,10 @@ export function UserManagement() {
   }
 
   // チーム別のユーザーセクションを構築する。
-  // - teams の並び順でチームごとのセクションを作る（所属 0 名のチームも見出しは表示する）。
-  // - 末尾に「未所属」セクションを置く（未所属が 1 名以上いる場合のみ）。
+  // - 先頭に「未所属」セクションを置く（新規に所属を割り当てる作業を頻繁に行うため最上部へ）。
+  //   未所属が 0 名のときは表示しない。
+  // - 続けて teams の並び順でチームごとのセクションを作る（所属 0 名のチームも見出しは表示する）。
+  // - 各チーム見出しには管理者（リーダー）名を表示する（teams[].leaderName を利用）。
   // - 各セクション内のメンバーは氏名の昇順（listUsers 側で name ASC 済みだが、念のため安定化）。
   const sections = useMemo<TeamSectionData[]>(() => {
     const membersByTeam = new Map<string, AdminUserView[]>();
@@ -452,19 +493,52 @@ export function UserManagement() {
       }
     }
 
-    const result: TeamSectionData[] = teams.map((team) => ({
-      key: team.id,
-      title: team.name,
-      members: membersByTeam.get(team.id) ?? [],
-    }));
+    const result: TeamSectionData[] = [];
 
-    // 未所属セクションは、該当者がいる場合のみ末尾に追加する。
+    // 1) 未所属セクションを先頭に置く（該当者がいる場合のみ）。
     if (unassigned.length > 0) {
-      result.push({ key: UNASSIGNED_TEAM_VALUE, title: '未所属', members: unassigned });
+      result.push({
+        key: UNASSIGNED_TEAM_VALUE,
+        title: '未所属',
+        members: unassigned,
+        leaderName: null,
+      });
+    }
+
+    // 2) 各チームのセクション（teams の並び順）。
+    for (const team of teams) {
+      result.push({
+        key: team.id,
+        title: team.name,
+        members: membersByTeam.get(team.id) ?? [],
+        leaderName: team.leaderName,
+      });
     }
 
     return result;
   }, [users, teams]);
+
+  // セクションの開閉状態（key → 開いているか）。既定は全セクションを開いた状態にする。
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  // sections が確定したら、まだ状態を持たないセクションを既定（開）で初期化する。
+  useEffect(() => {
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const s of sections) {
+        if (next[s.key] === undefined) {
+          next[s.key] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [sections]);
+
+  /** 指定セクションの開閉を切り替える。 */
+  function toggleSection(key: string): void {
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
 
   if (isLoading) {
     return (
@@ -529,6 +603,8 @@ export function UserManagement() {
               key={section.key}
               section={section}
               showActions={showActions}
+              isOpen={openSections[section.key] ?? true}
+              onToggle={toggleSection}
               renderRow={renderRow}
             />
           ))}
