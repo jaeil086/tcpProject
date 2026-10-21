@@ -11,16 +11,24 @@
 export interface DashboardDailyOccupancy {
   /** 対象日（YYYY-MM-DD） */
   date: string;
-  /** 当日 office を登録したメンバー数（= Occupancy_Count） */
+  /** 当日 office（出社=神田）を登録したメンバー数（= Occupancy_Count） */
   officeCount: number;
-  /** 当日 remote を登録したメンバー数 */
+  /** 当日 remote（テレワーク）を登録したメンバー数 */
   remoteCount: number;
-  /** 当日に勤務予定を登録したメンバー総数（office + remote） */
+  /** 当日 aoyama（本社・青山）を登録したメンバー数 */
+  aoyamaCount: number;
+  /** 当日 other（その他）を登録したメンバー数 */
+  otherCount: number;
+  /** 当日 vacation（休暇）を登録したメンバー数 */
+  vacationCount: number;
+  /** 当日に稼働区分（office + remote + aoyama）を登録したメンバー総数（出社率の分母） */
   total: number;
   /** 出社率（0〜100）。total === 0 のときは 0 */
   officeRate: number;
   /** 在宅率（0〜100）。total === 0 のときは 0 */
   remoteRate: number;
+  /** 青山率（0〜100）。total === 0 のときは 0 */
+  aoyamaRate: number;
 }
 
 /**

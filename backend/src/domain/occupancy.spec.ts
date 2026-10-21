@@ -26,11 +26,20 @@ const USER_POOL: readonly string[] = ['u1', 'u2', 'u3', 'u4'];
 /** DATE_POOL から 1 つ選ぶ arbitrary。対象日と同じプールから生成し、一致を頻発させる。 */
 const dateArbitrary: fc.Arbitrary<string> = fc.constantFrom(...DATE_POOL);
 
-/** ScheduleRecord 1 件を生成する arbitrary（小さなプールから userId・date・workLocation を選ぶ）。 */
+/**
+ * ScheduleRecord 1 件を生成する arbitrary（小さなプールから userId・date・workLocation を選ぶ）。
+ * workLocation は全 5 区分（office / remote / aoyama / other / vacation）から選ぶ。
+ */
 const scheduleRecordArbitrary: fc.Arbitrary<ScheduleRecord> = fc.record({
   userId: fc.constantFrom(...USER_POOL),
   date: dateArbitrary,
-  workLocation: fc.constantFrom(WorkLocation.Office, WorkLocation.Remote),
+  workLocation: fc.constantFrom(
+    WorkLocation.Office,
+    WorkLocation.Remote,
+    WorkLocation.Aoyama,
+    WorkLocation.Other,
+    WorkLocation.Vacation,
+  ),
 });
 
 /**
@@ -75,37 +84,55 @@ describe('OccupancyCalculator（純粋ドメインロジック）', () => {
     );
   });
 
-  // Feature: ai-team-planner, Property 8: 出社率・在宅率は 0〜100% に収まり合計が 100% になる
+  // Feature: ai-team-planner, Property 8: 各勤務区分の比率は 0〜100% に収まり、稼働 3 区分の合計が 100% になる
   //
   // 対象タスク: 4.7（Validates: Requirements 4.5）。
+  // 勤務区分を 5 値（office/remote/aoyama/other/vacation）へ拡張した新ポリシー:
+  //   - Occupancy_Count（混雑度）は office のみを数える（aoyama は含めない）。
+  //   - 出社率の分母 total は「稼働区分 = office + remote + aoyama」の登録者数とし、
+  //     other / vacation は分母に含めない。
+  //
   // 任意の勤務予定集合・任意の対象日について:
-  //   (1) officeRate・remoteRate はともに [0, 100] の範囲に収まる。
-  //   (2) total >= 1（当日 1 人以上が登録）のとき officeRate + remoteRate === 100。
-  //   (3) total === 0（登録者 0 人）の境界では両率が 0 であり、[0, 100] に収まる
+  //   (1) officeRate・remoteRate・aoyamaRate はいずれも [0, 100] の範囲に収まる。
+  //   (2) total >= 1（当日 1 人以上が稼働区分を登録）のとき、
+  //       officeRate + remoteRate + aoyamaRate は 100 に一致する（浮動小数の端数は許容）。
+  //   (3) total === 0（稼働登録者 0 人）の境界では 3 率とも 0 であり、[0, 100] に収まる
   //       （このとき合計 100 は要求しない）。
-  //   (4) officeCount + remoteCount === total、かつ officeCount === countOccupancy（整合性）。
-  it('出社率・在宅率は 0〜100% に収まり合計が 100% になる（Property 8 / タスク 4.7）', () => {
+  //   (4) officeCount + remoteCount + aoyamaCount === total、
+  //       かつ officeCount === countOccupancy（整合性）。
+  //   (5) other / vacation は total に含まれない（分母から除外）。
+  it('各区分の比率は 0〜100% に収まり稼働 3 区分の合計が 100% になる（Property 8 / タスク 4.7）', () => {
     fc.assert(
       fc.property(schedulesArbitrary, dateArbitrary, (schedules, date) => {
         const result = computeDailyRates(schedules, date);
 
-        // (1) 両率とも [0, 100] の範囲内。
-        expect(result.officeRate).toBeGreaterThanOrEqual(0);
-        expect(result.officeRate).toBeLessThanOrEqual(100);
-        expect(result.remoteRate).toBeGreaterThanOrEqual(0);
-        expect(result.remoteRate).toBeLessThanOrEqual(100);
+        // (1) 稼働 3 区分の率はいずれも [0, 100] の範囲内。
+        for (const rate of [result.officeRate, result.remoteRate, result.aoyamaRate]) {
+          expect(rate).toBeGreaterThanOrEqual(0);
+          expect(rate).toBeLessThanOrEqual(100);
+        }
 
-        // (4) 件数の整合性: office + remote === total、office === Occupancy_Count。
-        expect(result.officeCount + result.remoteCount).toBe(result.total);
+        // (4) 件数の整合性: office + remote + aoyama === total、office === Occupancy_Count。
+        expect(result.officeCount + result.remoteCount + result.aoyamaCount).toBe(
+          result.total,
+        );
         expect(result.officeCount).toBe(countOccupancy(schedules, date));
 
+        // (5) other / vacation は分母（total）に含めない。
+        const sameDayCount = (location: WorkLocation) =>
+          schedules.filter((r) => r.date === date && r.workLocation === location).length;
+        expect(result.otherCount).toBe(sameDayCount(WorkLocation.Other));
+        expect(result.vacationCount).toBe(sameDayCount(WorkLocation.Vacation));
+
         if (result.total === 0) {
-          // (3) 境界: 登録者 0 人のときは両率とも 0（合計 100 は要求しない）。
+          // (3) 境界: 稼働登録者 0 人のときは 3 率とも 0（合計 100 は要求しない）。
           expect(result.officeRate).toBe(0);
           expect(result.remoteRate).toBe(0);
+          expect(result.aoyamaRate).toBe(0);
         } else {
-          // (2) total >= 1 のとき合計は厳密に 100。
-          expect(result.officeRate + result.remoteRate).toBe(100);
+          // (2) total >= 1 のとき、稼働 3 区分の率の合計は 100（浮動小数の端数を許容）。
+          const sum = result.officeRate + result.remoteRate + result.aoyamaRate;
+          expect(sum).toBeCloseTo(100, 10);
         }
       }),
       { numRuns: 100 },

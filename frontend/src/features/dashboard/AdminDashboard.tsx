@@ -306,16 +306,67 @@ export function AdminDashboard() {
                   <tr className="odd:bg-white even:bg-gray-50">
                     <th
                       scope="row"
-                      className="px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
+                      className="border-b border-gray-100 px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
                     >
                       テレワーク率
                     </th>
                     {days.map((day) => (
                       <td
                         key={day.date}
-                        className="px-3 py-2 text-center text-green-700"
+                        className="border-b border-gray-100 px-3 py-2 text-center text-green-700"
                       >
                         {formatPercent(day.remoteRate)}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* 青山（本社）人数 */}
+                  <tr className="odd:bg-white even:bg-gray-50">
+                    <th
+                      scope="row"
+                      className="border-b border-gray-100 px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
+                    >
+                      青山人数
+                    </th>
+                    {days.map((day) => (
+                      <td
+                        key={day.date}
+                        className="border-b border-gray-100 px-3 py-2 text-center text-purple-700"
+                      >
+                        {day.aoyamaCount}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* その他人数（研修・外出など。稼働外として出社率の分母には含めない） */}
+                  <tr className="odd:bg-white even:bg-gray-50">
+                    <th
+                      scope="row"
+                      className="border-b border-gray-100 px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
+                    >
+                      その他人数
+                    </th>
+                    {days.map((day) => (
+                      <td
+                        key={day.date}
+                        className="border-b border-gray-100 px-3 py-2 text-center text-amber-700"
+                      >
+                        {day.otherCount}
+                      </td>
+                    ))}
+                  </tr>
+                  {/* 休暇人数（稼働外として出社率の分母には含めない） */}
+                  <tr className="odd:bg-white even:bg-gray-50">
+                    <th
+                      scope="row"
+                      className="px-3 py-2 text-left font-medium text-gray-800 whitespace-nowrap"
+                    >
+                      休暇人数
+                    </th>
+                    {days.map((day) => (
+                      <td
+                        key={day.date}
+                        className="px-3 py-2 text-center text-pink-700"
+                      >
+                        {day.vacationCount}
                       </td>
                     ))}
                   </tr>

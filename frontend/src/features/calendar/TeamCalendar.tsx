@@ -21,12 +21,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError, calendarApi } from '../../api';
 import { useAuth } from '../../auth';
 import { formatDateJa } from '../../lib/date';
-import {
-  WorkLocation,
-  type CalendarResponse,
-  type Team,
-  type WorkLocation as WorkLocationValue,
-} from '../../types';
+import { renderWorkLocation } from '../../lib/work-location';
+import { type CalendarResponse, type Team } from '../../types';
 
 /**
  * カレンダー取得失敗時のユーザー向け日本語メッセージへ変換する（要件 3.7）。
@@ -36,24 +32,6 @@ function toCalendarErrorMessage(error: unknown): string {
     return error.message;
   }
   return '勤務予定データの取得に失敗しました。時間をおいて再度お試しください。';
-}
-
-/**
- * 勤務区分（office/remote/null）を表示用のラベルとスタイルへ変換する（要件 3.6）。
- */
-function renderWorkLocation(workLocation: WorkLocationValue | null): {
-  label: string;
-  className: string;
-} {
-  switch (workLocation) {
-    case WorkLocation.Office:
-      return { label: '出社', className: 'bg-blue-100 text-blue-800' };
-    case WorkLocation.Remote:
-      return { label: 'テレワーク', className: 'bg-green-100 text-green-800' };
-    default:
-      // 未登録（null）は淡色で区別表示する（要件 3.6）。
-      return { label: '未登録', className: 'bg-gray-50 text-gray-400' };
-  }
 }
 
 /**
@@ -275,7 +253,7 @@ export function TeamCalendar() {
                     {member.name}
                   </th>
                   {member.days.map((day) => {
-                    const { label, className } = renderWorkLocation(day.workLocation);
+                    const { label, badgeClass } = renderWorkLocation(day.workLocation);
                     return (
                       <td
                         key={day.date}
@@ -283,7 +261,7 @@ export function TeamCalendar() {
                       >
                         <span
                           className={
-                            'inline-block rounded px-2 py-0.5 text-xs ' + className
+                            'inline-block rounded px-2 py-0.5 text-xs ' + badgeClass
                           }
                         >
                           {label}

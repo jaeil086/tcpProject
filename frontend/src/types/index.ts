@@ -8,12 +8,22 @@
 //   バンドルサイズと相互運用性を優先する。値はバックエンドの enum と一致させる。
 
 /**
- * 勤務区分。office（出社）／ remote（在宅）の 2 値のみを許容する（要件 2.2、2.3）。
- * バックエンドの WorkLocation enum（'office' / 'remote'）と値を一致させる。
+ * 勤務区分。バックエンドの WorkLocation enum と値を一致させる。
+ *
+ * - Office（出社）: 神田オフィスへの出社。Occupancy_Count（混雑度）の唯一のカウント対象。
+ * - Remote（テレワーク）: 在宅勤務。
+ * - Aoyama（青山）: 本社（青山）への出社。
+ * - Other（その他）: 研修・外出など。
+ * - Vacation（休暇）: 休暇。
+ *
+ * 出社率の分母は稼働者（Office + Remote + Aoyama）。Other / Vacation は分母から除外する。
  */
 export const WorkLocation = {
   Office: 'office',
   Remote: 'remote',
+  Aoyama: 'aoyama',
+  Other: 'other',
+  Vacation: 'vacation',
 } as const;
 export type WorkLocation = (typeof WorkLocation)[keyof typeof WorkLocation];
 
@@ -311,16 +321,24 @@ export interface CalendarQuery {
 export interface DashboardDailyOccupancy {
   /** 対象日（YYYY-MM-DD） */
   date: string;
-  /** 当日 office を登録したメンバー数（= Occupancy_Count） */
+  /** 当日 office（出社=神田）を登録したメンバー数（= Occupancy_Count） */
   officeCount: number;
-  /** 当日 remote を登録したメンバー数 */
+  /** 当日 remote（テレワーク）を登録したメンバー数 */
   remoteCount: number;
-  /** 当日に勤務予定を登録したメンバー総数（office + remote） */
+  /** 当日 aoyama（本社・青山）を登録したメンバー数 */
+  aoyamaCount: number;
+  /** 当日 other（その他）を登録したメンバー数 */
+  otherCount: number;
+  /** 当日 vacation（休暇）を登録したメンバー数 */
+  vacationCount: number;
+  /** 当日に稼働区分（office + remote + aoyama）を登録したメンバー総数（出社率の分母） */
   total: number;
   /** 出社率（0〜100）。total === 0 のときは 0 */
   officeRate: number;
   /** 在宅率（0〜100）。total === 0 のときは 0 */
   remoteRate: number;
+  /** 青山率（0〜100）。total === 0 のときは 0 */
+  aoyamaRate: number;
 }
 
 /**
@@ -389,10 +407,16 @@ export interface AnalysisWarning {
 export interface DailyPatternSummary {
   /** 対象日（YYYY-MM-DD） */
   date: string;
-  /** 当日 office を登録したメンバー数（出社人数） */
+  /** 当日 office（出社=神田）を登録したメンバー数（出社人数） */
   officeCount: number;
-  /** 当日 remote を登録したメンバー数（在宅人数） */
+  /** 当日 remote（テレワーク）を登録したメンバー数（在宅人数） */
   remoteCount: number;
+  /** 当日 aoyama（本社・青山）を登録したメンバー数 */
+  aoyamaCount: number;
+  /** 当日 other（その他）を登録したメンバー数 */
+  otherCount: number;
+  /** 当日 vacation（休暇）を登録したメンバー数 */
+  vacationCount: number;
 }
 
 /**

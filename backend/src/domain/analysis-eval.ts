@@ -71,10 +71,16 @@ export interface AnalysisWarning {
 export interface DailyPatternSummary {
   /** 対象日（'YYYY-MM-DD'）。 */
   date: string;
-  /** 当日 office を登録したメンバー数（出社人数）。 */
+  /** 当日 office（出社=神田）を登録したメンバー数（出社人数）。 */
   officeCount: number;
-  /** 当日 remote を登録したメンバー数（在宅人数）。 */
+  /** 当日 remote（テレワーク）を登録したメンバー数（在宅人数）。 */
   remoteCount: number;
+  /** 当日 aoyama（本社・青山）を登録したメンバー数。 */
+  aoyamaCount: number;
+  /** 当日 other（その他）を登録したメンバー数。 */
+  otherCount: number;
+  /** 当日 vacation（休暇）を登録したメンバー数。 */
+  vacationCount: number;
 }
 
 /**
@@ -161,6 +167,9 @@ export function evaluateAnalysis(
       date,
       officeCount: rates.officeCount,
       remoteCount: rates.remoteCount,
+      aoyamaCount: rates.aoyamaCount,
+      otherCount: rates.otherCount,
+      vacationCount: rates.vacationCount,
     });
   }
 

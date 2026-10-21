@@ -25,13 +25,19 @@ import {
 import { formatDateJa } from '../../lib/date';
 import type { DashboardOccupancy } from '../../types';
 
-/** 出社系の配色（既存表の text-blue-700 と調和する青）。 */
+/** 出社（神田）系の配色（既存表の text-blue-700 と調和する青）。 */
 const OFFICE_COLOR = '#2563eb';
 /** テレワーク系の配色（既存表の text-green-700 と調和する緑）。 */
 const REMOTE_COLOR = '#16a34a';
+/** 青山（本社）系の配色（紫）。 */
+const AOYAMA_COLOR = '#9333ea';
+/** その他系の配色（アンバー）。 */
+const OTHER_COLOR = '#d97706';
+/** 休暇系の配色（ピンク）。 */
+const VACATION_COLOR = '#db2777';
 
 /**
- * 棒グラフ用に、日別の出社／テレワーク人数を整形する。
+ * 棒グラフ用に、日別の各勤務区分の人数を整形する。
  * x 軸ラベルは日本語の日付（例: 10月26日（月））とする。
  */
 function toBarData(occupancy: DashboardOccupancy) {
@@ -39,19 +45,25 @@ function toBarData(occupancy: DashboardOccupancy) {
     date: formatDateJa(day.date),
     office: day.officeCount,
     remote: day.remoteCount,
+    aoyama: day.aoyamaCount,
+    other: day.otherCount,
+    vacation: day.vacationCount,
   }));
 }
 
 /**
- * ドーナツグラフ用に、週全体の出社／テレワーク人数の合計を算出する。
- * 各日の officeCount / remoteCount を週で合算した 2 区分の比率を表す。
+ * ドーナツグラフ用に、週全体の各勤務区分の人数合計を算出する。
+ * 各日の区分別人数を週で合算した 5 区分の比率を表す。
  */
 function toPieData(occupancy: DashboardOccupancy) {
-  const totalOffice = occupancy.days.reduce((sum, day) => sum + day.officeCount, 0);
-  const totalRemote = occupancy.days.reduce((sum, day) => sum + day.remoteCount, 0);
+  const sum = (pick: (d: DashboardOccupancy['days'][number]) => number) =>
+    occupancy.days.reduce((acc, day) => acc + pick(day), 0);
   return [
-    { name: '出社', value: totalOffice, color: OFFICE_COLOR },
-    { name: 'テレワーク', value: totalRemote, color: REMOTE_COLOR },
+    { name: '出社', value: sum((d) => d.officeCount), color: OFFICE_COLOR },
+    { name: 'テレワーク', value: sum((d) => d.remoteCount), color: REMOTE_COLOR },
+    { name: '青山', value: sum((d) => d.aoyamaCount), color: AOYAMA_COLOR },
+    { name: 'その他', value: sum((d) => d.otherCount), color: OTHER_COLOR },
+    { name: '休暇', value: sum((d) => d.vacationCount), color: VACATION_COLOR },
   ];
 }
 
@@ -70,7 +82,7 @@ export function OccupancyCharts({ occupancy }: { occupancy: DashboardOccupancy }
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* 日別 出社／テレワーク人数（積み上げ棒グラフ） */}
       <div className="rounded border border-gray-200 bg-white p-4 lg:col-span-2">
-        <h3 className="mb-3 text-sm font-semibold text-gray-700">日別 出社／テレワーク人数</h3>
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">日別 勤務区分 人数</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
@@ -93,7 +105,10 @@ export function OccupancyCharts({ occupancy }: { occupancy: DashboardOccupancy }
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="office" name="出社" stackId="a" fill={OFFICE_COLOR} radius={[0, 0, 0, 0]} />
-              <Bar dataKey="remote" name="テレワーク" stackId="a" fill={REMOTE_COLOR} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="remote" name="テレワーク" stackId="a" fill={REMOTE_COLOR} radius={[0, 0, 0, 0]} />
+              <Bar dataKey="aoyama" name="青山" stackId="a" fill={AOYAMA_COLOR} radius={[0, 0, 0, 0]} />
+              <Bar dataKey="other" name="その他" stackId="a" fill={OTHER_COLOR} radius={[0, 0, 0, 0]} />
+              <Bar dataKey="vacation" name="休暇" stackId="a" fill={VACATION_COLOR} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -101,7 +116,7 @@ export function OccupancyCharts({ occupancy }: { occupancy: DashboardOccupancy }
 
       {/* 週全体の出社／テレワーク比率（ドーナツ） */}
       <div className="rounded border border-gray-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-gray-700">週全体の出社／テレワーク比率</h3>
+        <h3 className="mb-3 text-sm font-semibold text-gray-700">週全体の勤務区分 比率</h3>
         <div className="h-64 w-full">
           {pieTotal === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-sm text-gray-500">

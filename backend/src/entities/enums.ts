@@ -5,11 +5,23 @@
 
 /**
  * 勤務区分。
- * office（出社）／ remote（在宅）の 2 値のみを許容する（要件 2.2、2.3）。
+ *
+ * - office（出社）: 神田オフィスへの出社。本アプリの Occupancy_Count（混雑度）の
+ *   唯一のカウント対象。神田オフィスは座席が限られるため、この人数を管理する。
+ * - remote（テレワーク）: 在宅勤務。
+ * - aoyama（青山）: 本社（青山）への出社。神田の混雑度には含めないが、勤務者ではある。
+ * - other（その他）: 研修・外出など。勤務者だが出社率の分母には含めない（稼働外として扱う）。
+ * - vacation（休暇）: 休暇。稼働外として扱い、出社率の分母に含めない。
+ *
+ * 出社率（officeRate）の分母は「稼働している勤務者」= office + remote + aoyama とし、
+ * other / vacation は分母から除外する（occupancy.ts を参照）。
  */
 export enum WorkLocation {
   Office = 'office',
   Remote = 'remote',
+  Aoyama = 'aoyama',
+  Other = 'other',
+  Vacation = 'vacation',
 }
 
 /**

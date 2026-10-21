@@ -1,13 +1,14 @@
 // Feature: ai-team-planner
-// WorkLocationValidator: 入力値が勤務区分（office / remote）として妥当かを検証する
-// 純粋関数モジュール（要件 2.2、2.3）。
+// WorkLocationValidator: 入力値が勤務区分（office / remote / aoyama / other / vacation）として
+// 妥当かを検証する純粋関数モジュール（要件 2.2、2.3）。
 //
 // 設計方針:
 // - 副作用を持たない（DB・外部 API・現在時刻の暗黙参照なし）純粋 TS として実装し、
 //   NestJS などのフレームワーク依存を持たない。これによりタスク 4.4 の property テストが
 //   容易に書けるようにする。
-// - 勤務区分の許容値は enums.ts の WorkLocation（office / remote）を唯一の情報源とし、
+// - 勤務区分の許容値は enums.ts の WorkLocation を唯一の情報源とし（Object.values で動的導出）、
 //   本モジュール内で enum を再定義しない（表記の二重管理を避ける）。
+//   enum に値が追加された場合も、本モジュールの許容値は自動的に追従する。
 // - マッチングは enum の文字列値（'office' / 'remote'）に対する「完全一致（case-sensitive）」
 //   とする。大文字を含む 'Office'・'OFFICE'、前後の空白、空文字、null / undefined、
 //   数値など文字列以外の任意入力（unknown）はすべて拒否する（要件 2.3）。

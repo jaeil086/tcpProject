@@ -4,8 +4,8 @@
 // 設計方針:
 // - マウント時に GET /schedules/me（weekStart 省略）を呼び、翌週 Target_Week の
 //   平日 5 日分（登録済み／未登録）を取得する（要件 2.6）。読込中・読込失敗の状態を表示する。
-// - 各日について勤務区分（出社=office／在宅=remote）を選択できるセグメントボタンを描画する。
-//   選択肢は office/remote の 2 値のみを提示するため、不正値は UI レベルで構造的に抑止される
+// - 各日について勤務区分（出社=神田/テレワーク/青山/その他/休暇）をドロップダウンで選択できる。
+//   選択肢は WorkLocation の許容値のみを提示するため、不正値は UI レベルで構造的に抑止される
 //   （要件 2.2、2.3 の一次抑止）。
 // - 表示・編集対象は Target_Week の平日 5 日のみであるため、対象範囲外の日付は UI レベルで
 //   構造的に抑止される（要件 2.5 の一次抑止）。
@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError, schedulesApi } from '../../api';
 import { formatDateJa } from '../../lib/date';
+import { WORK_LOCATION_OPTIONS } from '../../lib/work-location';
 import { WorkLocation, type ScheduleDayEntry, type WeekSchedule } from '../../types';
 
 /** 保存処理中／成功表示を日付単位で管理するための状態。 */
@@ -26,15 +27,6 @@ interface DaySaveState {
   /** 直近の保存が成功したかどうか（短時間だけ true）。 */
   saved: boolean;
 }
-
-/**
- * 勤務区分の選択肢定義（出社／在宅の 2 値のみ）。
- * この配列以外の値は UI に現れないため、不正値は構造的に発生しない（要件 2.2、2.3）。
- */
-const WORK_LOCATION_OPTIONS: { value: WorkLocation; label: string }[] = [
-  { value: WorkLocation.Office, label: '出社' },
-  { value: WorkLocation.Remote, label: 'テレワーク' },
-];
 
 /**
  * ApiError（またはその他の例外）を保存失敗時のユーザー向け日本語メッセージへ変換する。
@@ -171,7 +163,7 @@ export function ScheduleEditor() {
       <header className="mb-6">
         <h1 className="text-xl font-bold text-gray-800">翌週の勤務予定</h1>
         <p className="mt-1 text-sm text-gray-500">
-          翌週（月曜〜金曜、平日）の各日について、出社／在宅を登録できます。
+          翌週（月曜〜金曜、平日）の各日について、勤務区分（出社・テレワーク・青山・その他・休暇）を登録できます。
         </p>
       </header>
 
@@ -257,33 +249,33 @@ function ScheduleDayRow({ day, saveState, onSelect }: ScheduleDayRowProps) {
         {saving && <span className="text-xs text-gray-400">保存中...</span>}
         {!saving && saved && <span className="text-xs text-green-600">保存しました</span>}
 
-        {/* 勤務区分セグメントボタン（出社／在宅の 2 値のみ。要件 2.2、2.3） */}
-        <div
-          role="group"
+        {/* 勤務区分ドロップダウン（出社／テレワーク／青山／その他／休暇。要件 2.2、2.3） */}
+        <select
           aria-label={`${formatDateJa(day.date)}の勤務区分`}
-          className="inline-flex overflow-hidden rounded border border-gray-300"
+          value={day.workLocation ?? ''}
+          disabled={saving}
+          onChange={(e) => {
+            const value = e.target.value;
+            // 空（未登録プレースホルダ）選択時は何もしない。
+            if (value === '') {
+              return;
+            }
+            onSelect(day.date, value as WorkLocation);
+          }}
+          className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
         >
-          {WORK_LOCATION_OPTIONS.map((option) => {
-            const selected = day.workLocation === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={selected}
-                disabled={saving}
-                onClick={() => onSelect(day.date, option.value)}
-                className={
-                  'px-4 py-1.5 text-sm transition disabled:cursor-not-allowed ' +
-                  (selected
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50')
-                }
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
+          {/* 未登録時のプレースホルダ（登録済みなら表示されない） */}
+          {isUnregistered && (
+            <option value="" disabled>
+              選択してください
+            </option>
+          )}
+          {WORK_LOCATION_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
     </li>
   );

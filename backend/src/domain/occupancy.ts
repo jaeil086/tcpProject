@@ -16,18 +16,20 @@
 // - total: ある日に勤務予定（office または remote のいずれか）を登録したメンバー数。
 //   未登録のメンバーは total に含めない。
 //
-// 丸め（rounding）に関する決定（要件 4.5、Property 8 に対応）:
-// - 出社率・在宅率は 0〜100 の百分率で表す。
-// - Property 8 は「total >= 1 のとき 出社率 + 在宅率 === 100」を要求する。
-// - 勤務区分はちょうど 2 値（office / remote）であり、当日登録者について
-//   total = officeCount + remoteCount が常に成立する。
-// - 個別に丸めると合計が 100 を割る恐れがあるため、
-//   officeRate = officeCount / total * 100 を算出したうえで、
-//   remoteRate = 100 - officeRate として求める。これにより浮動小数の
-//   端数によらず、合計が厳密に 100 になることを保証する。
-// - total === 0（当日の登録者が 0 人）の境界では 0 除算を避けるため、
-//   officeRate・remoteRate をともに 0 と定義する。この場合は合計が 100 に
-//   ならないが、Property 8 は total >= 1 のときのみ合計 100 を要求するため矛盾しない。
+// 勤務区分と「稼働者（working）」の定義:
+// - office（出社=神田）/ remote（テレワーク）/ aoyama（本社・青山） の 3 区分を「稼働者」とする。
+// - other（その他）/ vacation（休暇） は稼働外として扱い、出社率の分母から除外する。
+// - Occupancy_Count（神田オフィスの混雑度）は office のみを数える。aoyama は含めない。
+//
+// 丸め（rounding）に関する決定（要件 4.5）:
+// - 出社率・在宅率・青山率は 0〜100 の百分率で表す。
+// - 分母 total は「当日に稼働区分（office/remote/aoyama）を登録した人数」とする。
+//   other / vacation の登録者は total に含めない。
+// - officeRate = officeCount / total * 100 を算出する。
+//   remoteRate / aoyamaRate も同様に算出する。3 区分の合計は total の定義上 100 になるが、
+//   浮動小数の端数の影響を受け得るため、各率は独立に算出した素の値を返す
+//   （表示側で四捨五入する）。
+// - total === 0（当日の稼働登録者が 0 人）の境界では 0 除算を避けるため、各率を 0 と定義する。
 
 import { WorkLocation } from '../entities/enums';
 
@@ -40,24 +42,35 @@ export interface ScheduleRecord {
   userId: string;
   /** 対象日（'YYYY-MM-DD' 形式）。 */
   date: string;
-  /** 勤務区分（office / remote）。 */
+  /** 勤務区分（office / remote / aoyama / other / vacation）。 */
   workLocation: WorkLocation;
 }
 
 /**
- * 日別の集計結果（Occupancy_Count と出社率・在宅率）。
+ * 日別の集計結果（Occupancy_Count と各区分の人数・比率）。
  */
 export interface DailyRates {
-  /** 当日 office を登録したメンバー数（= Occupancy_Count）。 */
+  /** 当日 office（出社=神田）を登録したメンバー数（= Occupancy_Count）。 */
   officeCount: number;
-  /** 当日 remote を登録したメンバー数。 */
+  /** 当日 remote（テレワーク）を登録したメンバー数。 */
   remoteCount: number;
-  /** 当日に勤務予定を登録したメンバー総数（office + remote）。 */
+  /** 当日 aoyama（本社・青山）を登録したメンバー数。 */
+  aoyamaCount: number;
+  /** 当日 other（その他）を登録したメンバー数。 */
+  otherCount: number;
+  /** 当日 vacation（休暇）を登録したメンバー数。 */
+  vacationCount: number;
+  /**
+   * 当日に稼働区分（office + remote + aoyama）を登録したメンバー総数。
+   * other / vacation は含めない（出社率の分母）。
+   */
   total: number;
-  /** 出社率（0〜100）。total === 0 のときは 0。 */
+  /** 出社率（0〜100）= officeCount / total * 100。total === 0 のときは 0。 */
   officeRate: number;
-  /** 在宅率（0〜100）。total === 0 のときは 0。 */
+  /** 在宅率（0〜100）= remoteCount / total * 100。total === 0 のときは 0。 */
   remoteRate: number;
+  /** 青山率（0〜100）= aoyamaCount / total * 100。total === 0 のときは 0。 */
+  aoyamaRate: number;
 }
 
 /**
@@ -110,35 +123,43 @@ export function computeDailyRates(
   date: string,
 ): DailyRates {
   const sameDay = schedules.filter((record) => record.date === date);
-  const officeCount = sameDay.filter(
-    (record) => record.workLocation === WorkLocation.Office,
-  ).length;
-  const remoteCount = sameDay.filter(
-    (record) => record.workLocation === WorkLocation.Remote,
-  ).length;
-  const total = officeCount + remoteCount;
+  const countOf = (location: WorkLocation): number =>
+    sameDay.filter((record) => record.workLocation === location).length;
 
-  // total === 0（登録者なし）の境界では 0 除算を避け、両率を 0 とする。
+  const officeCount = countOf(WorkLocation.Office);
+  const remoteCount = countOf(WorkLocation.Remote);
+  const aoyamaCount = countOf(WorkLocation.Aoyama);
+  const otherCount = countOf(WorkLocation.Other);
+  const vacationCount = countOf(WorkLocation.Vacation);
+
+  // 出社率の分母は稼働者（office + remote + aoyama）。other / vacation は含めない。
+  const total = officeCount + remoteCount + aoyamaCount;
+
+  // total === 0（稼働登録者なし）の境界では 0 除算を避け、各率を 0 とする。
   if (total === 0) {
     return {
       officeCount,
       remoteCount,
+      aoyamaCount,
+      otherCount,
+      vacationCount,
       total,
       officeRate: 0,
       remoteRate: 0,
+      aoyamaRate: 0,
     };
   }
-
-  const officeRate = (officeCount / total) * 100;
-  // 合計が厳密に 100 になるよう、在宅率は減算で求める。
-  const remoteRate = 100 - officeRate;
 
   return {
     officeCount,
     remoteCount,
+    aoyamaCount,
+    otherCount,
+    vacationCount,
     total,
-    officeRate,
-    remoteRate,
+    officeRate: (officeCount / total) * 100,
+    remoteRate: (remoteCount / total) * 100,
+    aoyamaRate: (aoyamaCount / total) * 100,
   };
 }
 

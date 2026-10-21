@@ -90,9 +90,13 @@ export class DashboardService {
         date,
         officeCount: rates.officeCount,
         remoteCount: rates.remoteCount,
+        aoyamaCount: rates.aoyamaCount,
+        otherCount: rates.otherCount,
+        vacationCount: rates.vacationCount,
         total: rates.total,
         officeRate: rates.officeRate,
         remoteRate: rates.remoteRate,
+        aoyamaRate: rates.aoyamaRate,
       };
     });
 
