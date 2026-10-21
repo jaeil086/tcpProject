@@ -4,7 +4,9 @@
 // 設計方針:
 // - マウント時にユーザー一覧（GET /users）とチーム一覧（GET /teams）を並列取得する。
 //   チーム一覧はチーム割り当てプルダウンの選択肢に用いる。取得中はローディング表示を出す。
-// - 一覧はテーブルで描画する（氏名・メール・ロール・所属チーム・操作）。
+// - 一覧は「所属チームごと」にセクション分割して描画する。各セクションは見出し（チーム名 + 人数）と
+//   テーブル（氏名・メール・ロール・所属チーム・操作）で構成する。未所属ユーザーは末尾の独立
+//   セクションにまとめる。チームが増えても縦方向に積み上がるため、横方向への間延びを避けられる。
 //   アクセシビリティのため <th scope="col"> を付与し、操作系コントロールには aria-label を付ける。
 // - チーム割り当て: <select>（「未所属」= null を含む）を変更すると PUT /users/:id/team を呼び、
 //   成功時は返却された AdminUserView で該当行を差し替える。失敗時は行単位のエラーを表示する。
@@ -15,7 +17,7 @@
 //   ラベル表示に切り替える（バックエンドでも @Roles(SuperAdmin) で保護している）。
 // - 更新中の行は該当コントロールを無効化し、二重送信を防ぐ。
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ApiError, calendarApi, usersApi } from '../../api';
 import { useAuth } from '../../auth';
 import { UserRole, type AdminUserView, type Team } from '../../types';
@@ -46,6 +48,210 @@ function toActionErrorMessage(error: unknown): string {
     return error.message;
   }
   return '更新に失敗しました。時間をおいて再度お試しください。';
+}
+
+/** UserRow が各行の操作ハンドラ・権限フラグを受け取るための共通 props。 */
+interface UserRowContext {
+  teams: Team[];
+  canChangeRole: boolean;
+  canResetPassword: boolean;
+  canDeleteUser: boolean;
+  showActions: boolean;
+  currentUserId: string | undefined;
+  isUpdating: boolean;
+  rowError: string | undefined;
+  tempPassword: string | undefined;
+  onRoleChange: (userId: string, role: UserRole) => void;
+  onTeamChange: (userId: string, rawValue: string) => void;
+  onResetPassword: (user: AdminUserView) => void;
+  onDeleteUser: (user: AdminUserView) => void;
+}
+
+/**
+ * ユーザー 1 名分のテーブル行。
+ * 氏名・メール・ロール・所属チーム・操作（最上位管理者のみ）を描画する。
+ * 状態（更新中・行エラー・一時パスワード）は props で受け取り、副作用は持たない。
+ */
+function UserRow({ user, ctx }: { user: AdminUserView; ctx: UserRowContext }) {
+  const {
+    teams,
+    canChangeRole,
+    canResetPassword,
+    canDeleteUser,
+    showActions,
+    currentUserId,
+    isUpdating,
+    rowError,
+    tempPassword,
+    onRoleChange,
+    onTeamChange,
+    onResetPassword,
+    onDeleteUser,
+  } = ctx;
+
+  return (
+    <tr className="align-top">
+      <td className="px-4 py-3 text-gray-900">{user.name}</td>
+      <td className="px-4 py-3 text-gray-700">{user.email}</td>
+
+      {/* ロール変更（最上位管理者のみ編集可。それ以外は読み取り専用ラベル） */}
+      <td className="px-4 py-3">
+        {canChangeRole ? (
+          <select
+            aria-label={`${user.name} のロール`}
+            value={user.role}
+            disabled={isUpdating}
+            onChange={(e) => onRoleChange(user.id, e.target.value as UserRole)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+          >
+            <option value={UserRole.Employee}>{roleLabel(UserRole.Employee)}</option>
+            <option value={UserRole.TeamAdmin}>{roleLabel(UserRole.TeamAdmin)}</option>
+            <option value={UserRole.SuperAdmin}>{roleLabel(UserRole.SuperAdmin)}</option>
+          </select>
+        ) : (
+          <span className="text-gray-700">{roleLabel(user.role)}</span>
+        )}
+      </td>
+
+      {/* チーム割り当て */}
+      <td className="px-4 py-3">
+        <select
+          aria-label={`${user.name} の所属チーム`}
+          value={user.teamId ?? UNASSIGNED_TEAM_VALUE}
+          disabled={isUpdating}
+          onChange={(e) => onTeamChange(user.id, e.target.value)}
+          className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+        >
+          <option value={UNASSIGNED_TEAM_VALUE}>未所属</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+
+        {/* 行単位の操作エラー（ロール変更・チーム割り当て共通） */}
+        {rowError && (
+          <p role="alert" className="mt-1 text-xs text-red-600">
+            {rowError}
+          </p>
+        )}
+      </td>
+
+      {/* 操作（パスワード再設定・削除。最上位管理者のみ） */}
+      {showActions && (
+        <td className="px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {canResetPassword && (
+              <button
+                type="button"
+                aria-label={`${user.name} のパスワードを再設定`}
+                disabled={isUpdating}
+                onClick={() => onResetPassword(user)}
+                className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUpdating ? '処理中...' : 'パスワード再設定'}
+              </button>
+            )}
+
+            {/* ユーザー削除（最上位管理者のみ）。自分自身は削除できないためボタンを出さない。 */}
+            {canDeleteUser && currentUserId !== user.id && (
+              <button
+                type="button"
+                aria-label={`${user.name} を削除`}
+                disabled={isUpdating}
+                onClick={() => onDeleteUser(user)}
+                className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUpdating ? '処理中...' : '削除'}
+              </button>
+            )}
+          </div>
+
+          {/* 発行された一時パスワード（この表示でのみ確認可能） */}
+          {tempPassword && (
+            <div className="mt-2 rounded border border-green-300 bg-green-50 px-2 py-1 text-xs text-green-800">
+              <p className="font-medium">一時パスワードを発行しました</p>
+              <code className="mt-1 block break-all font-mono text-sm text-gray-900">
+                {tempPassword}
+              </code>
+              <p className="mt-1 text-[11px] text-green-700">
+                この値は再表示できません。控えて本人へ伝え、初回ログイン後に変更してもらってください。
+              </p>
+            </div>
+          )}
+        </td>
+      )}
+    </tr>
+  );
+}
+
+/** チーム別セクション 1 つ分の表示データ。 */
+interface TeamSectionData {
+  key: string;
+  title: string;
+  members: AdminUserView[];
+}
+
+/**
+ * チーム別のユーザーセクション。
+ * 見出し（チーム名 + 人数）と、所属メンバーのテーブルを描画する。
+ */
+function TeamSection({
+  section,
+  showActions,
+  renderRow,
+}: {
+  section: TeamSectionData;
+  showActions: boolean;
+  renderRow: (user: AdminUserView) => React.ReactNode;
+}) {
+  return (
+    <section className="mb-6">
+      {/* セクション見出し: チーム名 + 所属人数 */}
+      <div className="mb-2 flex items-baseline gap-2">
+        <h2 className="text-base font-semibold text-gray-900">{section.title}</h2>
+        <span className="text-sm text-gray-500">
+          （<span className="font-semibold text-gray-700">{section.members.length}</span> 名）
+        </span>
+      </div>
+
+      {section.members.length === 0 ? (
+        <p className="rounded border border-gray-200 bg-white px-4 py-3 text-sm text-gray-400">
+          所属メンバーはいません。
+        </p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                  氏名
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                  メール
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                  ロール
+                </th>
+                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                  所属チーム
+                </th>
+                {showActions && (
+                  <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
+                    操作
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {section.members.map((user) => renderRow(user))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
 }
 
 /**
@@ -229,6 +435,37 @@ export function UserManagement() {
     }
   }
 
+  // チーム別のユーザーセクションを構築する。
+  // - teams の並び順でチームごとのセクションを作る（所属 0 名のチームも見出しは表示する）。
+  // - 末尾に「未所属」セクションを置く（未所属が 1 名以上いる場合のみ）。
+  // - 各セクション内のメンバーは氏名の昇順（listUsers 側で name ASC 済みだが、念のため安定化）。
+  const sections = useMemo<TeamSectionData[]>(() => {
+    const membersByTeam = new Map<string, AdminUserView[]>();
+    const unassigned: AdminUserView[] = [];
+    for (const u of users) {
+      if (u.teamId) {
+        const list = membersByTeam.get(u.teamId) ?? [];
+        list.push(u);
+        membersByTeam.set(u.teamId, list);
+      } else {
+        unassigned.push(u);
+      }
+    }
+
+    const result: TeamSectionData[] = teams.map((team) => ({
+      key: team.id,
+      title: team.name,
+      members: membersByTeam.get(team.id) ?? [],
+    }));
+
+    // 未所属セクションは、該当者がいる場合のみ末尾に追加する。
+    if (unassigned.length > 0) {
+      result.push({ key: UNASSIGNED_TEAM_VALUE, title: '未所属', members: unassigned });
+    }
+
+    return result;
+  }, [users, teams]);
+
   if (isLoading) {
     return (
       <div className="py-10 text-center text-sm text-gray-500" role="status">
@@ -248,30 +485,34 @@ export function UserManagement() {
     );
   }
 
-  // チーム別の所属人数を集計する（未所属を含む）。
-  // teams の並び順で件数を算出し、最後に「未所属」を付加する。
-  const assignedCountByTeam = new Map<string, number>();
-  let unassignedCount = 0;
-  for (const u of users) {
-    if (u.teamId) {
-      assignedCountByTeam.set(u.teamId, (assignedCountByTeam.get(u.teamId) ?? 0) + 1);
-    } else {
-      unassignedCount += 1;
-    }
+  /** 1 行分の UserRow を、行ごとの状態を注入して描画する。 */
+  function renderRow(user: AdminUserView): React.ReactNode {
+    return (
+      <UserRow
+        key={user.id}
+        user={user}
+        ctx={{
+          teams,
+          canChangeRole,
+          canResetPassword,
+          canDeleteUser,
+          showActions,
+          currentUserId: currentUser?.id,
+          isUpdating: updatingIds.has(user.id),
+          rowError: rowErrors[user.id],
+          tempPassword: tempPasswords[user.id],
+          onRoleChange: handleRoleChange,
+          onTeamChange: handleTeamChange,
+          onResetPassword: handleResetPassword,
+          onDeleteUser: handleDeleteUser,
+        }}
+      />
+    );
   }
-  // 表示用のチーム別件数リスト（teams の順 + 末尾に未所属）。
-  const teamCounts: { key: string; label: string; count: number }[] = [
-    ...teams.map((team) => ({
-      key: team.id,
-      label: team.name,
-      count: assignedCountByTeam.get(team.id) ?? 0,
-    })),
-    { key: '__unassigned__', label: '未所属', count: unassignedCount },
-  ];
 
   return (
     <section>
-      <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <div className="mb-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h1 className="text-xl font-bold text-gray-900">ユーザー管理</h1>
         {/* 総ユーザー数 */}
         <span className="text-sm text-gray-600">
@@ -279,152 +520,18 @@ export function UserManagement() {
         </span>
       </div>
 
-      {/* チーム別の所属人数サマリー */}
-      {users.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {teamCounts.map((tc) => (
-            <span
-              key={tc.key}
-              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700"
-            >
-              {tc.label}
-              <span className="font-semibold text-gray-900">{tc.count}</span> 名
-            </span>
-          ))}
-        </div>
-      )}
-
       {users.length === 0 ? (
         <p className="text-sm text-gray-500">対象ユーザーが存在しません。</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  氏名
-                </th>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  メール
-                </th>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  ロール
-                </th>
-                <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                  所属チーム
-                </th>
-                {showActions && (
-                  <th scope="col" className="px-4 py-3 text-left font-medium text-gray-700">
-                    操作
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {users.map((user) => {
-                const isUpdating = updatingIds.has(user.id);
-                const rowError = rowErrors[user.id];
-                const tempPassword = tempPasswords[user.id];
-                return (
-                  <tr key={user.id} className="align-top">
-                    <td className="px-4 py-3 text-gray-900">{user.name}</td>
-                    <td className="px-4 py-3 text-gray-700">{user.email}</td>
-
-                    {/* ロール変更（最上位管理者のみ編集可。それ以外は読み取り専用ラベル） */}
-                    <td className="px-4 py-3">
-                      {canChangeRole ? (
-                        <select
-                          aria-label={`${user.name} のロール`}
-                          value={user.role}
-                          disabled={isUpdating}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                          className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                        >
-                          <option value={UserRole.Employee}>{roleLabel(UserRole.Employee)}</option>
-                          <option value={UserRole.TeamAdmin}>{roleLabel(UserRole.TeamAdmin)}</option>
-                          <option value={UserRole.SuperAdmin}>
-                            {roleLabel(UserRole.SuperAdmin)}
-                          </option>
-                        </select>
-                      ) : (
-                        <span className="text-gray-700">{roleLabel(user.role)}</span>
-                      )}
-                    </td>
-
-                    {/* チーム割り当て */}
-                    <td className="px-4 py-3">
-                      <select
-                        aria-label={`${user.name} の所属チーム`}
-                        value={user.teamId ?? UNASSIGNED_TEAM_VALUE}
-                        disabled={isUpdating}
-                        onChange={(e) => handleTeamChange(user.id, e.target.value)}
-                        className="rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                      >
-                        <option value={UNASSIGNED_TEAM_VALUE}>未所属</option>
-                        {teams.map((team) => (
-                          <option key={team.id} value={team.id}>
-                            {team.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      {/* 行単位の操作エラー（ロール変更・チーム割り当て共通） */}
-                      {rowError && (
-                        <p role="alert" className="mt-1 text-xs text-red-600">
-                          {rowError}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* 操作（パスワード再設定・削除。最上位管理者のみ） */}
-                    {showActions && (
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {canResetPassword && (
-                            <button
-                              type="button"
-                              aria-label={`${user.name} のパスワードを再設定`}
-                              disabled={isUpdating}
-                              onClick={() => handleResetPassword(user)}
-                              className="rounded border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isUpdating ? '処理中...' : 'パスワード再設定'}
-                            </button>
-                          )}
-
-                          {/* ユーザー削除（最上位管理者のみ）。自分自身は削除できないためボタンを出さない。 */}
-                          {canDeleteUser && currentUser?.id !== user.id && (
-                            <button
-                              type="button"
-                              aria-label={`${user.name} を削除`}
-                              disabled={isUpdating}
-                              onClick={() => handleDeleteUser(user)}
-                              className="rounded border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isUpdating ? '処理中...' : '削除'}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* 発行された一時パスワード（この表示でのみ確認可能） */}
-                        {tempPassword && (
-                          <div className="mt-2 rounded border border-green-300 bg-green-50 px-2 py-1 text-xs text-green-800">
-                            <p className="font-medium">一時パスワードを発行しました</p>
-                            <code className="mt-1 block break-all font-mono text-sm text-gray-900">
-                              {tempPassword}
-                            </code>
-                            <p className="mt-1 text-[11px] text-green-700">
-                              この値は再表示できません。控えて本人へ伝え、初回ログイン後に変更してもらってください。
-                            </p>
-                          </div>
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          {sections.map((section) => (
+            <TeamSection
+              key={section.key}
+              section={section}
+              showActions={showActions}
+              renderRow={renderRow}
+            />
+          ))}
         </div>
       )}
     </section>
