@@ -34,7 +34,7 @@ const AOYAMA_COLOR = '#118AB2';
 /** その他系の配色（アンバー）。 */
 const OTHER_COLOR = '#06D6A0';
 /** 休暇系の配色（ピンク）。 */
-const VACATION_COLOR = '#FFDCDC';
+const VACATION_COLOR = '#BE1A1A';
 
 /**
  * 棒グラフ用に、日別の各勤務区分の人数を整形する。
