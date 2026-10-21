@@ -25,7 +25,9 @@
     "seed:clean": "ts-node src/seed-clean.ts",
     "seed:clean:prod": "node dist/seed-clean.js",
     "seed:users": "ts-node src/seed-users.ts",
-    "seed:users:prod": "node dist/seed-users.js"
+    "seed:users:prod": "node dist/seed-users.js",
+    "seed:schedules": "ts-node src/seed-schedules.ts",
+    "seed:schedules:prod": "node dist/seed-schedules.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.4",
