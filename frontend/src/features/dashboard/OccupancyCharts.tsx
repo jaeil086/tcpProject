@@ -26,15 +26,15 @@ import { formatDateJa } from '../../lib/date';
 import type { DashboardOccupancy } from '../../types';
 
 /** 出社（神田）系の配色（既存表の text-blue-700 と調和する青）。 */
-const OFFICE_COLOR = '#73e759';
+const OFFICE_COLOR = '#FF7F50';
 /** テレワーク系の配色（既存表の text-green-700 と調和する緑）。 */
-const REMOTE_COLOR = '#2f82ed';
+const REMOTE_COLOR = '#FFD166';
 /** 青山（本社）系の配色（紫）。 */
-const AOYAMA_COLOR = '#b363fde9';
+const AOYAMA_COLOR = '#118AB2';
 /** その他系の配色（アンバー）。 */
-const OTHER_COLOR = '#f3b734';
+const OTHER_COLOR = '#06D6A0';
 /** 休暇系の配色（ピンク）。 */
-const VACATION_COLOR = '#db2727';
+const VACATION_COLOR = '#FFDCDC';
 
 /**
  * 棒グラフ用に、日別の各勤務区分の人数を整形する。
