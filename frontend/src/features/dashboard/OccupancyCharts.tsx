@@ -117,7 +117,8 @@ export function OccupancyCharts({ occupancy }: { occupancy: DashboardOccupancy }
       {/* 週全体の出社／テレワーク比率（ドーナツ） */}
       <div className="rounded border border-gray-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-gray-700">週全体の勤務区分 比率</h3>
-        <div className="h-64 w-full">
+        {/* 凡例（5 区分 + 比率）が複数行になっても収まるよう高さに余裕を持たせる。 */}
+        <div className="h-72 w-full">
           {pieTotal === 0 ? (
             <div className="flex h-full items-center justify-center text-center text-sm text-gray-500">
               対象週に登録された勤務予定がありません。
@@ -131,12 +132,12 @@ export function OccupancyCharts({ occupancy }: { occupancy: DashboardOccupancy }
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
-                  outerRadius={85}
+                  innerRadius={50}
+                  outerRadius={80}
                   paddingAngle={2}
-                  // ラベルに区分名と比率（％）を表示する。
-                  label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
-                  labelLine={false}
+                  // 区分が多く小さな値も混在するため、スライス上のラベルは描かない
+                  // （文字の重なり・はみ出しを防ぐ）。比率は凡例とツールチップで示す。
+                  isAnimationActive={false}
                 >
                   {pieData.map((entry) => (
                     <Cell key={entry.name} fill={entry.color} />
@@ -146,7 +147,18 @@ export function OccupancyCharts({ occupancy }: { occupancy: DashboardOccupancy }
                   formatter={(value: number, name: string) => [`${value} 人`, name]}
                   contentStyle={{ fontSize: 12, borderRadius: 6, borderColor: '#e5e7eb' }}
                 />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {/* 凡例に「区分名 比率%」を表示する（スライス上ラベルの代替）。 */}
+                <Legend
+                  wrapperStyle={{ fontSize: 12 }}
+                  formatter={(value: string) => {
+                    const entry = pieData.find((d) => d.name === value);
+                    const percent =
+                      entry && pieTotal > 0
+                        ? Math.round((entry.value / pieTotal) * 100)
+                        : 0;
+                    return `${value} ${percent}%`;
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
